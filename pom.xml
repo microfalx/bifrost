@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one
+  ~ or more contributor license agreements.  See the NOTICE file
+  ~ distributed with this work for additional information
+  ~ regarding copyright ownership.  The ASF licenses this file
+  ~ to you under the Apache License, Version 2.0 (the
+  ~ "License"); you may not use this file except in compliance
+  ~ with the License.  You may obtain a copy of the License at
+  ~
+  ~   http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing,
+  ~ software distributed under the License is distributed on an
+  ~ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  ~ KIND, either express or implied.  See the License for the
+  ~ specific language governing permissions and limitations
+  ~ under the License.
+  -->
+
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>net.microfalx.bifrost</groupId>
+    <artifactId>bifrost</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+
+    <parent>
+        <groupId>net.microfalx</groupId>
+        <artifactId>pom</artifactId>
+        <version>1.0.9</version>
+    </parent>
+
+    <name>Bifrost</name>
+    <description>Unified building and deployment platform for applications</description>
+    <url>https://github.com/microfalx/bifrost#</url>
+
+    <organization>
+        <name>Adrian Tarau</name>
+        <url>https://github.com/adrian-tarau</url>
+    </organization>
+
+    <scm>
+        <connection>scm:git:https://github.com/microfalx/bifrost#</connection>
+        <developerConnection>scm:git:https://github.com/microfalx/bifrost</developerConnection>
+        <url>https://github.com/microfalx/bifrost/tree/main</url>
+    </scm>
+
+    <modules>
+        <module>base</module>
+        <module>extension</module>
+        <module>runtime</module>
+        <module>build</module>
+        <module>cli</module>
+        <module>bom</module>
+    </modules>
+
+    <issueManagement>
+        <system>github</system>
+        <url>https://github.com/microfalx/bifrost/issues</url>
+    </issueManagement>
+
+    <inceptionYear>2025</inceptionYear>
+
+    <properties>
+        <bom.version>1.0.16</bom.version>
+        <bootstrap.version>0.8.5-SNAPSHOT</bootstrap.version>
+        <spring.boot.version>3.5.4</spring.boot.version>
+    </properties>
+
+    <developers>
+        <developer>
+            <name>Adrian Tarau</name>
+            <email>adrian@tarau.net</email>
+        </developer>
+        <developer>
+            <name>Alex Tarau</name>
+            <email>alex@tarau.net</email>
+        </developer>
+    </developers>
+
+    <dependencyManagement>
+        <dependencies>
+
+            <dependency>
+                <groupId>net.microfalx.bootstrap</groupId>
+                <artifactId>bootstrap-bom</artifactId>
+                <version>${bootstrap.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+
+        <!-- Runtime -->
+
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- Development -->
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-devtools</artifactId>
+            <scope>runtime</scope>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- Tests -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-api</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-engine</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-params</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+    </dependencies>
+
+    <build>
+        <plugins>
+
+            <!-- Spring Boot -->
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <version>${spring.boot.version}</version>
+                <configuration>
+                    <excludes>
+                        <exclude>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                        </exclude>
+                    </excludes>
+                    <profiles>${spring.app.profiles}</profiles>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+    <pluginRepositories>
+        <pluginRepository>
+            <id>spring-milestones</id>
+            <url>https://repo.spring.io/milestone</url>
+        </pluginRepository>
+    </pluginRepositories>
+
+</project>
