@@ -34,13 +34,7 @@
 
     <dependencies>
 
-        <!-- Runtime -->
-
-        <!-- Not sure why this does not propagate from bootstrap-base-core -->
-        <!--dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter</artifactId>
-        </dependency-->
+       <!-- InHouse -->
 
         <dependency>
             <groupId>net.microfalx.bootstrap</groupId>
@@ -50,6 +44,12 @@
         <dependency>
             <groupId>net.microfalx.bifrost</groupId>
             <artifactId>bifrost-base-core</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>net.microfalx.bifrost</groupId>
+            <artifactId>bifrost-build-scm</artifactId>
             <version>${project.version}</version>
         </dependency>
 
