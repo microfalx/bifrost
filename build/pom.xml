@@ -36,6 +36,7 @@
     <modules>
         <module>scm</module>
         <module>maven</module>
+        <module>tool</module>
     </modules>
 
 </project>
