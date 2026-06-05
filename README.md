@@ -87,15 +87,10 @@ Applications are **registered**, not deployed.
 
 Applications can be registered by:
 
-* placing a JSON or XML file in:
-
-  ```
-  ~/.bifrost/applications/
-  ```
-* uploading through the Web UI
 * register it with `bifrost` CLI
+* uploading through the Web UI
 
-The CLI automatically discovers registered applications.
+The CLI can discover, list and describe registered applications.
 
 ```bash
 bifrost app list

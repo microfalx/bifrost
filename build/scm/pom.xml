@@ -22,7 +22,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 
     <modelVersion>4.0.0</modelVersion>
-    <artifactId>bifrost-build-maven</artifactId>
+    <artifactId>bifrost-build-scm</artifactId>
 
     <parent>
         <groupId>net.microfalx.bifrost</groupId>
@@ -30,7 +30,7 @@
         <version>0.1.0-SNAPSHOT</version>
     </parent>
 
-    <name>Bifrost :: Build :: Maven</name>
+    <name>Bifrost :: Build :: SCM</name>
 
     <dependencies>
 
@@ -38,23 +38,12 @@
 
         <dependency>
             <groupId>net.microfalx.bifrost</groupId>
-            <artifactId>bifrost-build-scm</artifactId>
+            <artifactId>bifrost-base-core</artifactId>
             <version>${project.version}</version>
         </dependency>
 
         <!-- Third Parties -->
 
-        <dependency>
-            <groupId>org.apache.maven</groupId>
-            <artifactId>maven-plugin-api</artifactId>
-            <version>${maven.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.apache.maven</groupId>
-            <artifactId>maven-core</artifactId>
-            <version>${maven.version}</version>
-        </dependency>
 
     </dependencies>
 
