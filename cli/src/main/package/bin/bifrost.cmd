@@ -14,12 +14,6 @@ if errorlevel 1 (
     exit /b 1
 )
 
-cd /d "%BIFROST_HOME%"
-if errorlevel 1 (
-    echo ERROR: Unable to change directory to %BIFROST_HOME%
-    exit /b 1
-)
-
 java -jar "%BIFROST_HOME%\lib\bifrost.jar" %*
 
 endlocal
