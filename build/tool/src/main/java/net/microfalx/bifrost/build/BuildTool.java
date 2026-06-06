@@ -1,5 +1,6 @@
 package net.microfalx.bifrost.build;
 
+import net.microfalx.bifrost.api.Project;
 import net.microfalx.bifrost.util.ProcessLauncher;
 import net.microfalx.lang.*;
 
@@ -132,6 +133,13 @@ public abstract class BuildTool implements Identifiable<String>, Nameable, Descr
      * Releases the project and deploys artifacts in remote repository (GA).
      */
     public abstract BuildExecution release();
+
+    /**
+     * Loads and the project from the given directory.
+     *
+     * @return a non-null instance
+     */
+    public abstract Project getProject(File directory);
 
     /**
      * Returns the executable name.

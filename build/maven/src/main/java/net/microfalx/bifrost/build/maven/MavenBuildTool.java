@@ -1,13 +1,18 @@
 package net.microfalx.bifrost.build.maven;
 
+import net.microfalx.bifrost.api.Project;
 import net.microfalx.bifrost.build.BuildExecution;
 import net.microfalx.bifrost.build.BuildTool;
 import net.microfalx.bifrost.util.ProcessLauncher;
 import net.microfalx.lang.JvmUtils;
 import org.springframework.stereotype.Component;
 
+import java.io.File;
+
 @Component
 public class MavenBuildTool extends BuildTool {
+
+    private final MavenLoader mavenLoader = new MavenLoader();
 
     public MavenBuildTool() {
         super("maven", "Apache Maven");
@@ -29,6 +34,11 @@ public class MavenBuildTool extends BuildTool {
     public BuildExecution release() {
         ProcessLauncher launcher = internalCreateLauncher().addArgument("release");
         return createExecution(launcher);
+    }
+
+    @Override
+    public Project getProject(File directory) {
+        return mavenLoader.getProject(new File(directory, "pom.xml"));
     }
 
     @Override

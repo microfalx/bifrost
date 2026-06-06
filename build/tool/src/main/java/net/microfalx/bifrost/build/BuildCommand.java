@@ -1,5 +1,6 @@
 package net.microfalx.bifrost.build;
 
+import net.microfalx.bifrost.api.Project;
 import net.microfalx.bootstrap.cli.command.RunnableCommand;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -32,29 +33,44 @@ public class BuildCommand extends RunnableCommand {
     @CommandLine.Option(names = {"-v", "--verbose"}, description = "Displays verbose information")
     private boolean verbose;
 
+    private BuildTool buildTool;
+    private Project project;
+
     @Override
     protected void execute() throws IOException {
-        File workingDirectory = getWorkingDirectory();
-        if (isNotEmpty(this.workingDirectory)) {
-            workingDirectory = new File(this.workingDirectory);
-            if (!workingDirectory.exists()) {
-                printLn("The project directory '" + workingDirectory + "' does not exist");
-                return;
-            }
-        }
-        BuildTool buildTool = buildService.detect(workingDirectory);
-        buildTool.setWorkingDirectory(workingDirectory);
+        initBuildTool();
+        print("Loading project...");
+        loadProject(buildTool);
+        String projectName = bold(project.getName());
+        BuildExecution execution;
         if (!push) {
-            printLn("Building project");
-            buildTool.build();
+            print("building project " + quote(projectName));
+            execution = buildTool.build();
         } else {
             if (release) {
-                printLn("Releasing project");
-                buildTool.release();
+                print("releasing project " + quote(projectName));
+                execution = buildTool.release();
             } else {
-                printLn("Building and deploy project");
-                buildTool.deploy();
+                print("deploy project " + quote(projectName));
+                execution = buildTool.deploy();
             }
         }
+        print("...");
+        int errorCode = execution.waitFor();
+        printLn(ok("OK"));
+    }
+
+    private File getFinalWorkingDirectory() {
+        return getWorkingDirectory(this.workingDirectory);
+    }
+
+    private void initBuildTool() {
+        File workingDirectory = getFinalWorkingDirectory();
+        buildTool = buildService.detect(workingDirectory);
+        buildTool.setWorkingDirectory(workingDirectory);
+    }
+
+    public void loadProject(BuildTool buildTool) {
+        project = buildTool.getProject(getFinalWorkingDirectory());
     }
 }
