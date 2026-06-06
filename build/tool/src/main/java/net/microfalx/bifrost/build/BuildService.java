@@ -9,7 +9,7 @@ import org.springframework.stereotype.Service;
 import java.io.File;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
+import java.util.concurrent.CopyOnWriteArraySet;
 
 import static java.util.stream.Collectors.joining;
 import static net.microfalx.lang.ArgumentUtils.requireNonNull;
@@ -20,7 +20,8 @@ public class BuildService implements InitializingBean {
 
     @Autowired private ApplicationContext applicationContext;
 
-    private final Map<String, BuildTool> tools = new ConcurrentHashMap<>();
+    private final Map<String, BuildTool> toolsById = new ConcurrentHashMap<>();
+    private final Collection<BuildTool> tools = new CopyOnWriteArraySet<>();
 
     /**
      * Returns the registered tools.
@@ -28,7 +29,7 @@ public class BuildService implements InitializingBean {
      * @return a non-null instance
      */
     public Collection<BuildTool> getTools() {
-        List<BuildTool> commandList = new ArrayList<>(tools.values());
+        List<BuildTool> commandList = new ArrayList<>(tools);
         commandList.sort(Comparator.comparing(BuildTool::getName));
         return commandList;
     }
@@ -41,7 +42,7 @@ public class BuildService implements InitializingBean {
      */
     public BuildTool getTool(String idOrName) {
         requireNotEmpty(idOrName);
-        BuildTool command = tools.getOrDefault(StringUtils.toIdentifier(idOrName), tools.get(idOrName));
+        BuildTool command = toolsById.getOrDefault(StringUtils.toIdentifier(idOrName), toolsById.get(idOrName));
         if (command == null) {
             throw new IllegalArgumentException("Unknown build tool: " + idOrName);
         }
@@ -62,7 +63,7 @@ public class BuildService implements InitializingBean {
         String supportedBuildTools = getTools().stream()
                 .map(BuildTool::getName).collect(joining(", "));
         throw new BuildException("A suitable build tool for project '" + directory.getAbsolutePath()
-                + "' is not registered. Supported build tools: " + supportedBuildTools);
+                + "' is not registered or the directory does not contain a project. Supported build tools: " + supportedBuildTools);
     }
 
     @Override
@@ -74,8 +75,9 @@ public class BuildService implements InitializingBean {
         String[] beanNames = applicationContext.getBeanNamesForType(BuildTool.class);
         for (String beanName : beanNames) {
             BuildTool command = (BuildTool) applicationContext.getBean(beanName);
-            tools.put(command.getName(), command);
-            tools.put(command.getId(), command);
+            toolsById.put(command.getName(), command);
+            toolsById.put(command.getId(), command);
+            tools.add(command);
         }
     }
 }
