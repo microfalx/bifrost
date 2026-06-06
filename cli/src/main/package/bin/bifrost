@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+if [ -z "$BIFROST_HOME" ]; then
+  BIFROST_HOME="$(cd "$SCRIPT_DIR/.." && pwd)"
+fi
+
+if ! command -v java >/dev/null 2>&1; then
+  echo "ERROR: Java executable not found in PATH." >&2
+  echo "Please install Java and ensure 'java' is available on the PATH." >&2
+  exit 1
+fi
+
+cd "$BIFROST_HOME" || {
+  echo "ERROR: Unable to change directory to $BIFROST_HOME" >&2
+  exit 1
+}
+
+exec java -jar "$BIFROST_HOME/lib/bifrost.jar" "$@"
