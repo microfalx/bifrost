@@ -79,7 +79,7 @@ public class MavenBuildTool extends BuildTool {
 
     private ProcessLauncher internalCreateLauncher() {
         ProcessLauncher launcher = createLauncher();
-        if (isClean()) launcher = launcher.addArgument("-B").addArgument("clean");
+        if (isClean()) launcher = launcher.addArgument("clean");
         return launcher;
     }
 

@@ -9,7 +9,7 @@ import picocli.CommandLine;
 import java.io.File;
 import java.io.IOException;
 
-import static net.microfalx.lang.StringUtils.isNotEmpty;
+import static net.microfalx.lang.TextUtils.insertSpaces;
 
 @Component
 @CommandLine.Command(name = "build", mixinStandardHelpOptions = true,
@@ -40,7 +40,7 @@ public class BuildCommand extends RunnableCommand {
     protected void execute() throws IOException {
         initBuildTool();
         print("Loading project...");
-        loadProject(buildTool);
+        execute(() -> loadProject(buildTool));
         String projectName = bold(project.getName());
         BuildExecution execution;
         if (!push) {
@@ -57,8 +57,12 @@ public class BuildCommand extends RunnableCommand {
         }
         print("...");
         execution.setProject(project);
-        int errorCode = execution.waitFor();
-        printLn(exitCode(errorCode));
+        int exitCode = execute(execution::waitFor);
+        printLn(exitCode(exitCode));
+        if (exitCode > 0) {
+            String log = insertSpaces(execution.getLastStep().getLogs(), 2, true);
+            printLn().printLn(log);
+        }
     }
 
     private File getFinalWorkingDirectory() {
@@ -68,7 +72,7 @@ public class BuildCommand extends RunnableCommand {
     private void initBuildTool() {
         File workingDirectory = getFinalWorkingDirectory();
         buildTool = buildService.detect(workingDirectory);
-        buildTool.setWorkingDirectory(workingDirectory);
+        buildTool.setWorkingDirectory(workingDirectory).setClean(clean);
     }
 
     public void loadProject(BuildTool buildTool) {
