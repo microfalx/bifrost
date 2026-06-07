@@ -9,10 +9,7 @@ import net.microfalx.lang.StringUtils;
 import net.microfalx.resource.Resource;
 import net.microfalx.threadpool.ThreadPool;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.LineNumberReader;
+import java.io.*;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -207,6 +204,19 @@ public class ProcessLauncher implements Identifiable<String>, Nameable {
     }
 
     /**
+     * Returns the logs as a String.
+     *
+     * @return a non-null instance
+     */
+    public String getLogsAsString() {
+        try {
+            return getLogs().loadAsString();
+        } catch (IOException e) {
+            return "#ERROR: " + getRootCauseDescription(e);
+        }
+    }
+
+    /**
      * Returns a stream of string (lines) from the process log.
      *
      * @return a non-null instance
@@ -240,11 +250,13 @@ public class ProcessLauncher implements Identifiable<String>, Nameable {
      */
     public int waitFor() {
         if (dryRun) return 0;
-        sleepMillis(50);
-        if (!isStarted()) {
-            throw new ProcessException("Process '" + executable + "' failed to start, logs: " + getLogs());
-        }
         long end = currentTimeMillis() + timeout.toMillis();
+        while (!isStarted() && currentTimeMillis() < end) {
+            sleepMillis(10);
+        }
+        if (!isStarted()) {
+            throw new ProcessException("Process '" + executable + "' failed to start, logs: " + getLogsAsString());
+        }
         while (isRunning() && currentTimeMillis() < end) {
             sleepMillis(10);
         }
@@ -326,9 +338,9 @@ public class ProcessLauncher implements Identifiable<String>, Nameable {
     }
 
     private void doStart(ProcessBuilder builder) {
-        started = true;
         try {
             process = builder.start();
+            started = true;
             running = true;
         } catch (Exception e) {
             throw new ProcessException("Failed to run executable '" + executable + "'", e);
