@@ -1,5 +1,6 @@
 package net.microfalx.bifrost.build;
 
+import lombok.extern.slf4j.Slf4j;
 import net.microfalx.bifrost.api.Project;
 import net.microfalx.bootstrap.cli.command.RunnableCommand;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,6 +15,7 @@ import static net.microfalx.lang.TextUtils.insertSpaces;
 @Component
 @CommandLine.Command(name = "build", mixinStandardHelpOptions = true,
         description = "Building & Release Management")
+@Slf4j
 public class BuildCommand extends RunnableCommand {
 
     @Autowired private BuildService buildService;
@@ -54,7 +56,7 @@ public class BuildCommand extends RunnableCommand {
         builder.append(action).append(" project");
         if (clean) builder.append(" clean");
         String projectName = bold(project.getName());
-        builder.append(" project ").append(quote(projectName));
+        builder.append(' ').append(quote(projectName));
         return builder.toString();
     }
 
@@ -82,11 +84,6 @@ public class BuildCommand extends RunnableCommand {
             String log = insertSpaces(execution.getLastStep().getLogs(), 2, true);
             printLn().printLn(log);
         }
-        printLn(exitCode(exitCode));
-        if (exitCode > 0) {
-            String log = insertSpaces(execution.getLastStep().getLogs(), 2, true);
-            printLn().printLn(log);
-        }
     }
 
     private File getFinalWorkingDirectory() {
@@ -94,9 +91,12 @@ public class BuildCommand extends RunnableCommand {
     }
 
     private void initBuildTool() {
+        LOGGER.info("Execute 'build' command with arguments: clean={}, push={}, release={}, verbose={}",
+                clean, push, release, verbose);
         File workingDirectory = getFinalWorkingDirectory();
         buildTool = buildService.detect(workingDirectory);
-        buildTool.setWorkingDirectory(workingDirectory).setClean(clean);
+        buildTool.setWorkingDirectory(workingDirectory);
+        buildTool.setClean(clean);
     }
 
     private void initProject() {

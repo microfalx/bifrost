@@ -1,5 +1,6 @@
 package net.microfalx.bifrost.build;
 
+import net.microfalx.lang.ClassUtils;
 import net.microfalx.lang.StringUtils;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -58,7 +59,13 @@ public class BuildService implements InitializingBean {
     public BuildTool detect(File directory) {
         requireNonNull(directory);
         for (BuildTool tool : getTools()) {
-            if (tool.accept(directory)) return tool;
+            if (tool.accept(directory)) {
+                try {
+                    return ClassUtils.create(tool.getClass());
+                } catch (Exception e) {
+                    throw new BuildException("Could not create build tool: " + tool.getName(), e);
+                }
+            }
         }
         String supportedBuildTools = getTools().stream()
                 .map(BuildTool::getName).collect(joining(", "));
