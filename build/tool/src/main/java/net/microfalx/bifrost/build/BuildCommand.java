@@ -39,25 +39,49 @@ public class BuildCommand extends RunnableCommand {
     @Override
     protected void execute() throws IOException {
         initBuildTool();
-        print("Loading project").printDots();
-        execute(() -> loadProject(buildTool));
+        initProject();
+        doExecute();
+    }
+
+    private String createBuildMessage() {
+        String action;
+        if (!push) {
+            action = "building";
+        } else {
+            action = release ? "releasing" : "deploying";
+        }
+        StringBuilder builder = new StringBuilder();
+        builder.append(action).append(" project");
+        if (clean) builder.append(" clean");
         String projectName = bold(project.getName());
+        builder.append(" project ").append(quote(projectName));
+        return builder.toString();
+    }
+
+    private BuildExecution startExecuting() {
+        print(createBuildMessage());
         BuildExecution execution;
         if (!push) {
-            print("building project " + quote(projectName));
             execution = buildTool.build();
         } else {
             if (release) {
-                print("releasing project " + quote(projectName));
                 execution = buildTool.release();
             } else {
-                print("deploy project " + quote(projectName));
                 execution = buildTool.deploy();
             }
         }
         printDots();
         execution.setProject(project);
+        return execution;
+    }
+
+    private void completeExecution(BuildExecution execution) {
         int exitCode = execute(execution::waitFor);
+        printLn(exitCode(exitCode));
+        if (exitCode > 0) {
+            String log = insertSpaces(execution.getLastStep().getLogs(), 2, true);
+            printLn().printLn(log);
+        }
         printLn(exitCode(exitCode));
         if (exitCode > 0) {
             String log = insertSpaces(execution.getLastStep().getLogs(), 2, true);
@@ -75,7 +99,17 @@ public class BuildCommand extends RunnableCommand {
         buildTool.setWorkingDirectory(workingDirectory).setClean(clean);
     }
 
-    public void loadProject(BuildTool buildTool) {
+    private void initProject() {
+        print("Loading project").printDots();
+        execute(() -> loadProject(buildTool));
+    }
+
+    private void doExecute() {
+        BuildExecution execution = startExecuting();
+        completeExecution(execution);
+    }
+
+    private void loadProject(BuildTool buildTool) {
         project = buildTool.getProject(getFinalWorkingDirectory());
     }
 }
