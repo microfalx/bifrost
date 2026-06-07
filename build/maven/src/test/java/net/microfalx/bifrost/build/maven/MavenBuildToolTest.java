@@ -1,9 +1,12 @@
 package net.microfalx.bifrost.build.maven;
 
 import net.microfalx.bifrost.build.BuildExecution;
+import net.microfalx.bifrost.build.BuildStep;
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 
 class MavenBuildToolTest {
@@ -15,6 +18,9 @@ class MavenBuildToolTest {
     void buildForReal() {
         BuildExecution execution = tool.build();
         assertEquals(0, execution.waitFor(), execution::getLogs);
+        BuildStep step = execution.getLastStep();
+        assertNotNull(step);
+        assertThat(execution.getSteps().size()).isGreaterThan(5);
     }
 
     @Test

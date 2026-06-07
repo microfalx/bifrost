@@ -56,8 +56,9 @@ public class BuildCommand extends RunnableCommand {
             }
         }
         print("...");
+        execution.setProject(project);
         int errorCode = execution.waitFor();
-        printLn(ok("OK"));
+        printLn(exitCode(errorCode));
     }
 
     private File getFinalWorkingDirectory() {

@@ -2,11 +2,17 @@ package net.microfalx.bifrost.util;
 
 import com.google.common.base.MoreObjects;
 import lombok.extern.slf4j.Slf4j;
-import net.microfalx.lang.*;
+import net.microfalx.lang.Identifiable;
+import net.microfalx.lang.JvmUtils;
+import net.microfalx.lang.Nameable;
+import net.microfalx.lang.StringUtils;
 import net.microfalx.resource.Resource;
 import net.microfalx.threadpool.ThreadPool;
 
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.LineNumberReader;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -14,11 +20,16 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 
 import static java.lang.System.currentTimeMillis;
 import static java.util.Collections.unmodifiableMap;
 import static net.microfalx.lang.ArgumentUtils.requireNonNull;
 import static net.microfalx.lang.ArgumentUtils.requireNotEmpty;
+import static net.microfalx.lang.ExceptionUtils.getRootCauseDescription;
+import static net.microfalx.lang.IOUtils.*;
+import static net.microfalx.lang.JvmUtils.getLogsDirectory;
 import static net.microfalx.lang.StringUtils.*;
 import static net.microfalx.lang.ThreadUtils.sleepMillis;
 import static net.microfalx.lang.TimeUtils.ONE_MINUTE;
@@ -29,6 +40,8 @@ import static net.microfalx.lang.TimeUtils.millisSince;
  */
 @Slf4j
 public class ProcessLauncher implements Identifiable<String>, Nameable {
+
+    private final static AtomicInteger LOG_COUNTER = new AtomicInteger(1);
 
     private final String id;
     private String name;
@@ -43,7 +56,6 @@ public class ProcessLauncher implements Identifiable<String>, Nameable {
     private volatile int exitCode;
     private final Map<String, Object> environment = new HashMap<>();
     private volatile boolean started;
-    private volatile boolean stopped;
     private volatile boolean running;
     private volatile long lastPing;
 
@@ -59,7 +71,7 @@ public class ProcessLauncher implements Identifiable<String>, Nameable {
     ProcessLauncher(File executable) {
         requireNonNull(executable);
         this.executable = executable;
-        this.id = toIdentifier(executable.getAbsolutePath());
+        this.id = toIdentifier(executable.getName());
         this.name = capitalizeFirst(executable.getName());
     }
 
@@ -195,6 +207,24 @@ public class ProcessLauncher implements Identifiable<String>, Nameable {
     }
 
     /**
+     * Returns a stream of string (lines) from the process log.
+     *
+     * @return a non-null instance
+     */
+    public Stream<String> getLogsStream() {
+        if (dryRun) {
+            return Stream.of(getDescription());
+        } else {
+            try {
+                LineNumberReader reader = new LineNumberReader(getBufferedReader(new FileReader(logFile)));
+                return reader.lines();
+            } catch (FileNotFoundException e) {
+                return Stream.of((getException(logFile, e)));
+            }
+        }
+    }
+
+    /**
      * Returns the properties of the server, including configuration and runtime information.
      *
      * @return a non-null instance
@@ -238,7 +268,7 @@ public class ProcessLauncher implements Identifiable<String>, Nameable {
             started = true;
             return;
         }
-        logFile = new File(JvmUtils.getLogsDirectory(), getId() + "_" + FORMATTER.format(LocalDateTime.now()) + ".log");
+        logFile = new File(getLogsDirectory(), getId() + "_" + LOG_COUNTER.getAndIncrement() + "_" + FORMATTER.format(LocalDateTime.now()) + ".log");
         File workingDirectory = this.workingDirectory != null ? this.workingDirectory : JvmUtils.getWorkingDirectory();
         ProcessBuilder builder = new ProcessBuilder(buildCommandLine()).directory(workingDirectory);
         builder.redirectOutput(logFile).redirectErrorStream(true);
@@ -272,7 +302,6 @@ public class ProcessLauncher implements Identifiable<String>, Nameable {
                 .add("workingDirectory", workingDirectory)
                 .add("dryRun", dryRun)
                 .add("started", started)
-                .add("stopped", stopped)
                 .add("running", running)
                 .toString();
     }
@@ -286,10 +315,14 @@ public class ProcessLauncher implements Identifiable<String>, Nameable {
 
     private String read(File file) {
         try {
-            return IOUtils.getInputStreamAsString(IOUtils.getBufferedInputStream(file));
+            return getInputStreamAsString(getBufferedInputStream(file));
         } catch (Exception e) {
-            return "#ERROR for " + file.getAbsolutePath() + ": " + ExceptionUtils.getRootCauseDescription(e);
+            return getException(file, e);
         }
+    }
+
+    private String getException(File file, Throwable throwable) {
+        return "#ERROR for " + file.getAbsolutePath() + ": " + getRootCauseDescription(throwable);
     }
 
     private void doStart(ProcessBuilder builder) {
@@ -308,6 +341,10 @@ public class ProcessLauncher implements Identifiable<String>, Nameable {
         command.add(executable.isAbsolute() ? executable.getAbsolutePath() : executable.getName());
         command.addAll(arguments);
         return command;
+    }
+
+    private String getDescription() {
+        return "Executed: " + String.join(" ", buildCommandLine());
     }
 
     private class Worker implements Runnable {

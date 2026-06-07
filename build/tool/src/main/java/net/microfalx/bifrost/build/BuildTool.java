@@ -5,9 +5,15 @@ import net.microfalx.bifrost.util.ProcessLauncher;
 import net.microfalx.lang.*;
 
 import java.io.File;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.Queue;
+import java.util.stream.Stream;
 
 import static net.microfalx.lang.ArgumentUtils.requireNonNull;
 import static net.microfalx.lang.ArgumentUtils.requireNotEmpty;
+import static net.microfalx.lang.StringUtils.NA_STRING;
 
 /**
  * An interface for a build tool.
@@ -142,6 +148,30 @@ public abstract class BuildTool implements Identifiable<String>, Nameable, Descr
     public abstract Project getProject(File directory);
 
     /**
+     * Returns the lines from the log as a collection of build steps.
+     *
+     * @param execution the tool execution
+     * @return a non-null instance
+     */
+    public Collection<BuildStep> getSteps(BuildExecution execution) {
+        Queue<BuildStep> steps = new LinkedList<>();
+        extractSteps(execution, steps, Integer.MAX_VALUE);
+        return steps;
+    }
+
+    /**
+     * Returns the last build step.
+     *
+     * @param execution the tool execution
+     * @return a non-null instance
+     */
+    public BuildStep getLastStep(BuildExecution execution) {
+        Queue<BuildStep> steps = new LinkedList<>();
+        extractSteps(execution, steps, 1);
+        return steps.isEmpty() ? new BuildStep("None") : steps.iterator().next();
+    }
+
+    /**
      * Returns the executable name.
      *
      * @return a non-null instance
@@ -156,12 +186,21 @@ public abstract class BuildTool implements Identifiable<String>, Nameable, Descr
     protected abstract String[] getProjectFiles();
 
     /**
+     * Parses the output line.
+     *
+     * @param line  the line
+     * @param index the index of the line
+     * @return a non-null instance
+     */
+    protected abstract BuildLine parse(String line, int index);
+
+    /**
      * Creates a process launcher for the executable associated with this tool.
      *
      * @return a non-null instance
      */
     protected final ProcessLauncher createLauncher() {
-        if (workingDirectory != null) workingDirectory = JvmUtils.getWorkingDirectory();
+        if (workingDirectory == null) workingDirectory = JvmUtils.getWorkingDirectory();
         return ProcessLauncher.create(getExecutable())
                 .setWorkingDirectory(workingDirectory)
                 .setDryRun(dryRun);
@@ -177,6 +216,34 @@ public abstract class BuildTool implements Identifiable<String>, Nameable, Descr
         requireNonNull(launcher);
         launcher.start(true);
         return new BuildExecution(this, launcher);
+    }
 
+    private void extractSteps(BuildExecution execution, Queue<BuildStep> steps, int maximumSteps) {
+        int index = 1;
+        String moduleName = null;
+        BuildStep currentStep = new BuildStep(NA_STRING).setModule(execution.getProject().isPresent() ? execution.getProject().get().getName() : NA_STRING);
+        Stream<String> stream = execution.getLogsStream();
+        Iterator<String> iterator = stream.iterator();
+        while (iterator.hasNext()) {
+            String line = iterator.next();
+            BuildLine buildLine = parse(line, index++);
+            if (buildLine.getType() == BuildLine.Type.MODULE) {
+                moduleName = buildLine.getName();
+            } else if (buildLine.getType() == BuildLine.Type.PLUGIN) {
+                appendStep(steps, currentStep, maximumSteps);
+                currentStep = new BuildStep(buildLine.getName()).setModule(moduleName);
+            } else {
+                if (currentStep != null) {
+                    currentStep.add(line);
+                }
+            }
+        }
+        appendStep(steps, currentStep, maximumSteps);
+    }
+
+    private void appendStep(Queue<BuildStep> steps, BuildStep step, int maximumSteps) {
+        if (step == null) return;
+        steps.add(step);
+        if (steps.size() > maximumSteps) steps.poll();
     }
 }
