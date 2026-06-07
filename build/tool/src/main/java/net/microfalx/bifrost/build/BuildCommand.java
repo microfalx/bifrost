@@ -39,7 +39,7 @@ public class BuildCommand extends RunnableCommand {
     @Override
     protected void execute() throws IOException {
         initBuildTool();
-        print("Loading project...");
+        print("Loading project").printDots();
         execute(() -> loadProject(buildTool));
         String projectName = bold(project.getName());
         BuildExecution execution;
@@ -55,7 +55,7 @@ public class BuildCommand extends RunnableCommand {
                 execution = buildTool.deploy();
             }
         }
-        print("...");
+        printDots();
         execution.setProject(project);
         int exitCode = execute(execution::waitFor);
         printLn(exitCode(exitCode));
