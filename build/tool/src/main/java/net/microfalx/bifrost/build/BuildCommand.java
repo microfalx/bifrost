@@ -2,6 +2,7 @@ package net.microfalx.bifrost.build;
 
 import lombok.extern.slf4j.Slf4j;
 import net.microfalx.bifrost.api.Project;
+import net.microfalx.bootstrap.cli.util.Console;
 import net.microfalx.bootstrap.cli.command.RunnableCommand;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -55,13 +56,14 @@ public class BuildCommand extends RunnableCommand {
         StringBuilder builder = new StringBuilder();
         builder.append(action).append(" project");
         if (clean) builder.append(" clean");
-        String projectName = bold(project.getName());
-        builder.append(' ').append(quote(projectName));
+        builder.append(' ');
         return builder.toString();
     }
 
     private BuildExecution startExecuting() {
-        print(createBuildMessage());
+        Console console = getConsole();
+        console.print(createBuildMessage())
+                .printQuote().printBold(project.getName()).printQuote();
         BuildExecution execution;
         if (!push) {
             execution = buildTool.build();
@@ -72,17 +74,18 @@ public class BuildCommand extends RunnableCommand {
                 execution = buildTool.deploy();
             }
         }
-        printDots();
+        console.printDots();
         execution.setProject(project);
         return execution;
     }
 
     private void completeExecution(BuildExecution execution) {
-        int exitCode = execute(execution::waitFor);
-        printLn(exitCode(exitCode));
+        Console console = getConsole();
+        int exitCode = getConsole().execute(execution::waitFor);
+        console.printExitCode(exitCode);
         if (exitCode > 0) {
             String log = insertSpaces(execution.getLastStep().getLogs(), 2, true);
-            printLn().printLn(log);
+            console.printLn().printLn(log);
         }
     }
 
@@ -97,11 +100,12 @@ public class BuildCommand extends RunnableCommand {
         buildTool = buildService.detect(workingDirectory);
         buildTool.setWorkingDirectory(workingDirectory);
         buildTool.setClean(clean);
+        buildTool.setConsole(getConsole());
     }
 
     private void initProject() {
-        print("Loading project").printDots();
-        execute(() -> loadProject(buildTool));
+        getConsole().print("Loading project").printDots();
+        getConsole().execute(() -> loadProject(buildTool));
     }
 
     private void doExecute() {

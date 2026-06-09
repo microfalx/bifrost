@@ -4,7 +4,7 @@ import net.microfalx.bifrost.api.Project;
 import net.microfalx.bifrost.build.BuildExecution;
 import net.microfalx.bifrost.build.BuildLine;
 import net.microfalx.bifrost.build.BuildTool;
-import net.microfalx.bifrost.util.ProcessLauncher;
+import net.microfalx.bootstrap.core.process.ProcessLauncher;
 import net.microfalx.lang.JvmUtils;
 import org.springframework.stereotype.Component;
 
@@ -25,20 +25,24 @@ public class MavenBuildTool extends BuildTool {
 
     @Override
     public BuildExecution build() {
-        ProcessLauncher launcher = internalCreateLauncher().addArgument("install");
+        ProcessLauncher launcher = createLauncher().setName("mvn install").addArgument("install");
         return createExecution(launcher);
     }
 
     @Override
     public BuildExecution deploy() {
-        ProcessLauncher launcher = internalCreateLauncher().addArgument("deploy");
+        ProcessLauncher launcher = createLauncher().setName("mvn install").addArgument("deploy");
         return createExecution(launcher);
     }
 
     @Override
     public BuildExecution release() {
-        ProcessLauncher launcher = internalCreateLauncher().addArgument("release");
-        return createExecution(launcher);
+        return new MavenRelease(this);
+    }
+
+    @Override
+    public Project getProject() {
+        return mavenLoader.getProject(new File(getWorkingDirectory(), "pom.xml"));
     }
 
     @Override
@@ -52,7 +56,7 @@ public class MavenBuildTool extends BuildTool {
     }
 
     @Override
-    protected String[] getProjectFiles() {
+    protected String[] getFiles() {
         return new String[]{"pom.xml"};
     }
 
@@ -77,11 +81,12 @@ public class MavenBuildTool extends BuildTool {
         }
     }
 
-    private ProcessLauncher internalCreateLauncher() {
-        ProcessLauncher launcher = createLauncher();
-        if (isClean()) launcher = launcher.addArgument("clean");
-        return launcher;
+    @Override
+    protected void updateLauncher(ProcessLauncher launcher) {
+        super.updateLauncher(launcher);
+        if (isClean()) launcher.addArgument("clean");
     }
+
 
     private static final Pattern MODULE_NAME = Pattern.compile("^\\[INFO\\]\\s+Building\\s+(.+)\\s+.*");
     private static final Pattern PLUGIN_NAME = Pattern.compile("^\\[INFO\\]\\s---\\s+([A-Za-z0-9\\-\\.\\:]+).*");

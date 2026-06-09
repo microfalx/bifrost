@@ -33,7 +33,8 @@ public class MavenLoader {
         initialize();
         MavenProject mavenProject = loadMavenProject(pom, false);
         Project.Builder builder = Project.builder(MavenUtils.getId(mavenProject.getArtifact()));
-        builder.name(mavenProject.getName()).description(mavenProject.getDescription());
+        builder.version(mavenProject.getVersion()).name(mavenProject.getName())
+                .description(mavenProject.getDescription());
         if (mavenProject.getScm() != null && isNotEmpty(mavenProject.getScm().getConnection())) {
             builder.repository(mavenProject.getScm().getConnection());
         }

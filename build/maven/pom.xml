@@ -38,12 +38,6 @@
 
         <dependency>
             <groupId>net.microfalx.bifrost</groupId>
-            <artifactId>bifrost-build-scm</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>net.microfalx.bifrost</groupId>
             <artifactId>bifrost-build-tool</artifactId>
             <version>${project.version}</version>
         </dependency>

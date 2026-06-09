@@ -1,11 +1,11 @@
 package net.microfalx.bifrost.build;
 
-import net.microfalx.bifrost.util.ProcessException;
+import net.microfalx.bootstrap.cli.CliException;
 
 /**
  * A base exception for all build errors.
  */
-public class BuildException extends ProcessException {
+public class BuildException extends CliException {
 
     public BuildException(String message) {
         super(message);
