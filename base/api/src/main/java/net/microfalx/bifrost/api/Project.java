@@ -1,10 +1,10 @@
 package net.microfalx.bifrost.api;
 
+import lombok.ToString;
 import net.microfalx.lang.IdentityAware;
 import net.microfalx.lang.NamedAndTaggedIdentifyAware;
 import net.microfalx.lang.UriUtils;
 
-import javax.swing.text.html.Option;
 import java.net.URI;
 import java.util.Optional;
 
@@ -14,6 +14,7 @@ import static net.microfalx.lang.ArgumentUtils.requireNotEmpty;
 /**
  * A class representing a software project.
  */
+@ToString(callSuper = true)
 public class Project extends NamedAndTaggedIdentifyAware<String> {
 
     /**
@@ -27,6 +28,7 @@ public class Project extends NamedAndTaggedIdentifyAware<String> {
     }
 
     private URI repository;
+    private String branch;
     private String version;
 
     /**
@@ -47,9 +49,43 @@ public class Project extends NamedAndTaggedIdentifyAware<String> {
         return Optional.ofNullable(version);
     }
 
+    /**
+     * Changes the version of this project.
+     *
+     * @param version the new version
+     * @return a new copy with a new version
+     */
+    public Project withVersion(String version) {
+        Project copy = (Project) copy();
+        copy.version = requireNotEmpty(version);
+        return copy;
+    }
+
+    /**
+     * Returns the branch of the project in SCM.
+     *
+     * @return a non-null instance
+     */
+    public String getBranch() {
+        return branch;
+    }
+
+    /**
+     * Changes the branch of this project.
+     *
+     * @param branch the new branch
+     * @return a new copy with a new branch
+     */
+    public Project withBranch(String branch) {
+        Project copy = (Project) copy();
+        copy.branch = requireNotEmpty(branch);
+        return copy;
+    }
+
     public static class Builder extends NamedAndTaggedIdentifyAware.Builder<String> {
 
         private URI repository;
+        private String branch = "main";
         private String version;
 
         private Builder(String id) {
@@ -57,8 +93,7 @@ public class Project extends NamedAndTaggedIdentifyAware<String> {
         }
 
         public Builder repository(String repository) {
-            this.repository = UriUtils.parseUri(requireNonNull(repository));
-            return this;
+            return repository(UriUtils.parseUri(requireNonNull(repository)));
         }
 
         public Builder repository(URI repository) {
@@ -68,6 +103,11 @@ public class Project extends NamedAndTaggedIdentifyAware<String> {
 
         public Builder version(String version) {
             this.version = requireNotEmpty(version);
+            return this;
+        }
+
+        public Builder branch(String branch) {
+            this.branch = requireNotEmpty(branch);
             return this;
         }
 
@@ -81,6 +121,7 @@ public class Project extends NamedAndTaggedIdentifyAware<String> {
             Project project = (Project) super.build();
             project.repository = repository;
             project.version = version;
+            project.branch = branch;
             return project;
         }
     }

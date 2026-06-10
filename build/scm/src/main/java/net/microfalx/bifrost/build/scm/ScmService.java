@@ -1,10 +1,11 @@
 package net.microfalx.bifrost.build.scm;
 
+import com.google.common.base.MoreObjects;
 import net.microfalx.bifrost.api.Project;
 import net.microfalx.bootstrap.resource.ResourceService;
 import net.microfalx.lang.ClassUtils;
-import net.microfalx.lang.FileUtils;
 import net.microfalx.lang.StringUtils;
+import net.microfalx.lang.UriUtils;
 import net.microfalx.resource.Resource;
 import net.microfalx.resource.ResourceUtils;
 import org.springframework.beans.factory.InitializingBean;
@@ -13,6 +14,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
+import java.net.URI;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
@@ -21,6 +23,7 @@ import static java.util.stream.Collectors.joining;
 import static net.microfalx.lang.ArgumentUtils.requireNonNull;
 import static net.microfalx.lang.ArgumentUtils.requireNotEmpty;
 import static net.microfalx.lang.FileUtils.validateDirectoryExists;
+import static net.microfalx.lang.StringUtils.defaultIfEmpty;
 
 @Service
 public class ScmService implements InitializingBean {
@@ -68,16 +71,37 @@ public class ScmService implements InitializingBean {
         for (Scm tool : getTools()) {
             if (tool.accept(directory)) {
                 try {
-                    return ClassUtils.create(tool.getClass());
+                    Scm newTool = ClassUtils.create(tool.getClass());
+                    newTool.scmService = this;
+                    return newTool;
                 } catch (Exception e) {
                     throw new ScmException("Could not create build tool: " + tool.getName(), e);
                 }
             }
         }
-        String supportedBuildTools = getTools().stream()
-                .map(Scm::getName).collect(joining(", "));
         throw new ScmException("A suitable SCM for project '" + directory.getAbsolutePath()
-                + "' is not registered or the directory does not contain a project. Supported build tools: " + supportedBuildTools);
+                + "' is not registered or the directory does not contain a project. Supported build tools: " + getSupportedTools());
+    }
+
+    /**
+     * Returns the SCM tool suitable to handle the given project.
+     *
+     * @param project the directory
+     * @return a non-null instance
+     */
+    public Scm detect(Project project) {
+        requireNonNull(project);
+        URI repository = project.getRepository();
+        if (repository == null) {
+            throw new ScmException("No repository found for project '" + project.getName() + "'");
+        }
+        String path = defaultIfEmpty(repository.getPath(), UriUtils.SLASH);
+        if (path.toLowerCase().endsWith(".git")) {
+            return getTool("git");
+        } else {
+            throw new ScmException("A suitable SCM for project '" + project.getName() + "' (" + project.getRepository() + ")"
+                    + "' is not registered . Supported build tools: " + getSupportedTools());
+        }
     }
 
     /**
@@ -94,6 +118,17 @@ public class ScmService implements InitializingBean {
     @Override
     public void afterPropertiesSet() throws Exception {
         discoverTools();
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                .add("tools", tools)
+                .toString();
+    }
+
+    private String getSupportedTools() {
+        return getTools().stream().map(Scm::getName).collect(joining(", "));
     }
 
     private void discoverTools() {
