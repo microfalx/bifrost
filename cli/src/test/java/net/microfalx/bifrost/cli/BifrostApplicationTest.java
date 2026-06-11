@@ -4,7 +4,7 @@ import net.microfalx.bifrost.build.BuildService;
 import net.microfalx.bootstrap.application.ApplicationConfiguration;
 import net.microfalx.bootstrap.application.ApplicationService;
 import net.microfalx.bootstrap.cli.CliService;
-import net.microfalx.bootstrap.core.async.AsynchronousConfig;
+import net.microfalx.bootstrap.core.async.AsynchronousConfiguration;
 import net.microfalx.bootstrap.core.i18n.I18nProperties;
 import net.microfalx.bootstrap.core.i18n.I18nService;
 import net.microfalx.bootstrap.resource.ResourceProperties;
@@ -21,7 +21,7 @@ import org.springframework.validation.beanvalidation.OptionalValidatorFactoryBea
 @ContextConfiguration(classes = {I18nService.class, ResourceService.class, ResourceProperties.class,
         OptionalValidatorFactoryBean.class, ApplicationConfiguration.class, ApplicationService.class,
         BuildService.class, CliService.class})
-@Import({I18nProperties.class, AsynchronousConfig.class})
+@Import({I18nProperties.class, AsynchronousConfiguration.class})
 @OverrideAutoConfiguration(enabled = false)
 @ImportAutoConfiguration
 @SpringBootTest

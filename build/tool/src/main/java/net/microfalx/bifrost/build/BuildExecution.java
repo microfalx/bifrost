@@ -49,11 +49,29 @@ public class BuildExecution extends Execution<BuildTool, BuildExecution> {
     }
 
     /**
+     * Returns the fist build step.
+     *
+     * @return a non-null instance
+     */
+    public final BuildStep getFirstStep() {
+        return getTool().getFirstStep(this);
+    }
+
+    /**
      * Returns the last step printed by the build tool.
      *
      * @return a non-null instance
      */
     public BuildStep getLastStep() {
         return getTool().getLastStep(this);
+    }
+
+    /**
+     * Returns the last step printed by the build tool.
+     *
+     * @return a non-null instance
+     */
+    public String getFirstAndLastStepLogs() {
+        return getTool().getFirstAndLastStepLogs(this);
     }
 }

@@ -18,9 +18,16 @@ class MavenBuildToolTest {
     void buildForReal() {
         BuildExecution execution = tool.build();
         assertEquals(0, execution.waitFor(), execution::getLogs);
-        BuildStep step = execution.getLastStep();
-        assertNotNull(step);
         assertThat(execution.getSteps().size()).isGreaterThan(5);
+
+        BuildStep step = execution.getFirstStep();
+        assertNotNull(step);
+
+        step = execution.getLastStep();
+        assertNotNull(step);
+
+        String logs = execution.getFirstAndLastStepLogs();
+        assertNotNull(logs);
     }
 
     @Test

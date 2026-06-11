@@ -3,6 +3,7 @@ package net.microfalx.bifrost.build.maven;
 import net.microfalx.bifrost.api.Project;
 import net.microfalx.bifrost.build.BuildExecution;
 import net.microfalx.bifrost.build.BuildTool;
+import net.microfalx.bifrost.build.scm.Scm;
 import net.microfalx.bootstrap.cli.util.Console;
 import net.microfalx.bootstrap.core.process.ProcessLauncher;
 import net.microfalx.lang.Version;
@@ -13,6 +14,8 @@ import static net.microfalx.lang.TextUtils.insertSpaces;
  * A class responsible to release a Maven projects.
  */
 public class MavenRelease extends BuildExecution {
+
+    private Scm cachedScm;
 
     public MavenRelease(BuildTool tool) {
         super(tool, "mvn release");
@@ -51,11 +54,18 @@ public class MavenRelease extends BuildExecution {
         return launcher;
     }
 
+    private Scm createScm() {
+        if (cachedScm == null) {
+            cachedScm = getTool().getScm(getProject().orElseThrow());
+        }
+        return cachedScm;
+    }
+
     private int handleExitCode(int exitCode) {
         Console console = getConsole();
         console.printExitCode(exitCode).printLn();
         if (exitCode > 0) {
-            String log = insertSpaces(getLastStep().getLogs(), 2, true);
+            String log = insertSpaces(getFirstAndLastStepLogs(), 2, true);
             console.printLn(log);
         }
         return exitCode;

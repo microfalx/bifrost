@@ -1,5 +1,7 @@
 package net.microfalx.bifrost.build;
 
+import com.google.common.base.MoreObjects;
+import net.microfalx.bifrost.build.scm.ScmService;
 import net.microfalx.lang.ClassUtils;
 import net.microfalx.lang.StringUtils;
 import org.springframework.beans.factory.InitializingBean;
@@ -20,6 +22,7 @@ import static net.microfalx.lang.ArgumentUtils.requireNotEmpty;
 public class BuildService implements InitializingBean {
 
     @Autowired private ApplicationContext applicationContext;
+    @Autowired private ScmService scmService;
 
     private final Map<String, BuildTool> toolsById = new ConcurrentHashMap<>();
     private final Collection<BuildTool> tools = new CopyOnWriteArraySet<>();
@@ -61,7 +64,10 @@ public class BuildService implements InitializingBean {
         for (BuildTool tool : getTools()) {
             if (tool.accept(directory)) {
                 try {
-                    return ClassUtils.create(tool.getClass());
+                    BuildTool newTool = ClassUtils.create(tool.getClass());
+                    newTool.scmService = scmService;
+                    newTool.setWorkingDirectory(directory);
+                    return newTool;
                 } catch (Exception e) {
                     throw new BuildException("Could not create build tool: " + tool.getName(), e);
                 }
@@ -69,7 +75,7 @@ public class BuildService implements InitializingBean {
         }
         String supportedBuildTools = getTools().stream()
                 .map(BuildTool::getName).collect(joining(", "));
-        throw new BuildException("A suitable build tool for project '" + directory.getAbsolutePath()
+        throw new BuildException("A suitable SCM tool for project '" + directory.getAbsolutePath()
                 + "' is not registered or the directory does not contain a project. Supported build tools: " + supportedBuildTools);
     }
 
@@ -78,13 +84,21 @@ public class BuildService implements InitializingBean {
         discoverTools();
     }
 
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                .add("scmService", scmService)
+                .add("tools", tools)
+                .toString();
+    }
+
     private void discoverTools() {
         String[] beanNames = applicationContext.getBeanNamesForType(BuildTool.class);
         for (String beanName : beanNames) {
-            BuildTool command = (BuildTool) applicationContext.getBean(beanName);
-            toolsById.put(command.getName(), command);
-            toolsById.put(command.getId(), command);
-            tools.add(command);
+            BuildTool tool = (BuildTool) applicationContext.getBean(beanName);
+            toolsById.put(tool.getName(), tool);
+            toolsById.put(tool.getId(), tool);
+            tools.add(tool);
         }
     }
 }

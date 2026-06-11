@@ -1,14 +1,13 @@
 package net.microfalx.bifrost.build;
 
 import net.microfalx.bifrost.api.Project;
+import net.microfalx.bifrost.build.scm.Scm;
+import net.microfalx.bifrost.build.scm.ScmService;
+import net.microfalx.bootstrap.test.ServiceUnitTestCase;
+import net.microfalx.bootstrap.test.annotation.Subject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.mockito.junit.jupiter.MockitoSettings;
-import org.mockito.quality.Strictness;
 import picocli.CommandLine;
 
 import java.io.File;
@@ -17,23 +16,26 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 
-@ExtendWith(MockitoExtension.class)
-@MockitoSettings(strictness = Strictness.LENIENT)
-class BuildCommandTest {
+class BuildCommandTest extends ServiceUnitTestCase {
 
+    @Mock private Scm scm;
+    @Mock private ScmService scmService;
     @Mock private BuildService buildService;
     @Mock private BuildExecution execution;
     @Mock private BuildTool buildTool;
     private Project project;
 
-    @InjectMocks
+    @Subject
     private BuildCommand command;
 
     @BeforeEach
     void setup() {
         project = (Project) Project.builder("test").name("Test").build();
+        doReturn(scm).when(scmService).detect(any(File.class));
+        doReturn(scm).when(scmService).detect(any(Project.class));
         doReturn(buildTool).when(buildService).detect(any(File.class));
         doReturn(project).when(buildTool).getProject(any(File.class));
+        doReturn(scm).when(buildTool).getScm(any(Project.class));
         doReturn(execution).when(buildTool).build();
     }
 

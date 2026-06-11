@@ -2,8 +2,9 @@ package net.microfalx.bifrost.build;
 
 import lombok.extern.slf4j.Slf4j;
 import net.microfalx.bifrost.api.Project;
-import net.microfalx.bootstrap.cli.util.Console;
+import net.microfalx.bifrost.build.scm.Scm;
 import net.microfalx.bootstrap.cli.command.RunnableCommand;
+import net.microfalx.bootstrap.cli.util.Console;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import picocli.CommandLine;
@@ -43,6 +44,7 @@ public class BuildCommand extends RunnableCommand {
     protected void execute() throws IOException {
         initBuildTool();
         initProject();
+        update();
         doExecute();
     }
 
@@ -84,7 +86,7 @@ public class BuildCommand extends RunnableCommand {
         int exitCode = getConsole().execute(execution::waitFor);
         console.printExitCode(exitCode);
         if (exitCode > 0) {
-            String log = insertSpaces(execution.getLastStep().getLogs(), 2, true);
+            String log = insertSpaces(execution.getFirstAndLastStepLogs(), 2, true);
             console.printLn().printLn(log);
         }
     }
@@ -94,9 +96,9 @@ public class BuildCommand extends RunnableCommand {
     }
 
     private void initBuildTool() {
-        LOGGER.info("Execute 'build' command with arguments: clean={}, push={}, release={}, verbose={}",
-                clean, push, release, verbose);
         File workingDirectory = getFinalWorkingDirectory();
+        LOGGER.info("Execute 'build' command with arguments: clean={}, push={}, release={}, verbose={}, working directory={}",
+                clean, push, release, verbose, workingDirectory);
         buildTool = buildService.detect(workingDirectory);
         buildTool.setWorkingDirectory(workingDirectory);
         buildTool.setClean(clean);
@@ -111,6 +113,17 @@ public class BuildCommand extends RunnableCommand {
     private void doExecute() {
         BuildExecution execution = startExecuting();
         completeExecution(execution);
+    }
+
+    private void update() {
+        getConsole().print("updating").printDots();
+        Scm scm = buildTool.getScm(project);
+        Scm.Update update = getConsole().execute(() -> scm.update(project));
+        if (update.hasChanges()) {
+            getConsole().print("pulled changes (");
+            getConsole().print(update.getFileCount() + "/" + update.getInsertionCount() + "/" + update.getDeletionCount());
+            getConsole().print(")");
+        }
     }
 
     private void loadProject(BuildTool buildTool) {

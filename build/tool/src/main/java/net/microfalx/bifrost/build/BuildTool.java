@@ -1,8 +1,13 @@
 package net.microfalx.bifrost.build;
 
+import com.google.common.base.MoreObjects;
 import net.microfalx.bifrost.api.Project;
+import net.microfalx.bifrost.build.scm.Scm;
+import net.microfalx.bifrost.build.scm.ScmService;
 import net.microfalx.bootstrap.cli.util.Tool;
 import net.microfalx.bootstrap.core.process.ProcessLauncher;
+import net.microfalx.lang.StringUtils;
+import net.microfalx.lang.TextUtils;
 
 import java.io.File;
 import java.util.Collection;
@@ -18,6 +23,8 @@ import static net.microfalx.lang.StringUtils.NA_STRING;
  * An interface for a build tool.
  */
 public abstract class BuildTool extends Tool<BuildTool> {
+
+    ScmService scmService;
 
     public BuildTool(String id, String name) {
         super(id, name);
@@ -53,6 +60,19 @@ public abstract class BuildTool extends Tool<BuildTool> {
     public abstract Project getProject(File directory);
 
     /**
+     * Returns the SCM to manage the project.
+     *
+     * @param project the project
+     * @return the scm
+     */
+    public Scm getScm(Project project) {
+        requireNonNull(project);
+        Scm scm = scmService.detect(getWorkingDirectory());
+        scm.setWorkingDirectory(getWorkingDirectory());
+        return scm;
+    }
+
+    /**
      * Returns the lines from the log as a collection of build steps.
      *
      * @param execution the tool execution
@@ -60,8 +80,20 @@ public abstract class BuildTool extends Tool<BuildTool> {
      */
     public final Collection<BuildStep> getSteps(BuildExecution execution) {
         Queue<BuildStep> steps = new LinkedList<>();
-        extractSteps(execution, steps, Integer.MAX_VALUE);
+        extractSteps(execution, null, steps, Integer.MAX_VALUE);
         return steps;
+    }
+
+    /**
+     * Returns the fist build step.
+     *
+     * @param execution the tool execution
+     * @return a non-null instance
+     */
+    public final BuildStep getFirstStep(BuildExecution execution) {
+        Queue<BuildStep> steps = new LinkedList<>();
+        extractSteps(execution, steps, null, 1);
+        return steps.isEmpty() ? new BuildStep("None") : steps.iterator().next();
     }
 
     /**
@@ -72,8 +104,41 @@ public abstract class BuildTool extends Tool<BuildTool> {
      */
     public final BuildStep getLastStep(BuildExecution execution) {
         Queue<BuildStep> steps = new LinkedList<>();
-        extractSteps(execution, steps, 1);
+        extractSteps(execution, null, steps, 1);
         return steps.isEmpty() ? new BuildStep("None") : steps.iterator().next();
+    }
+
+    /**
+     * Returns the fist build step.
+     *
+     * @param execution the tool execution
+     * @return a non-null instance
+     */
+    public final String getFirstAndLastStepLogs(BuildExecution execution) {
+        Queue<BuildStep> headSteps = new LinkedList<>();
+        Queue<BuildStep> tailSteps = new LinkedList<>();
+        extractSteps(execution, headSteps, tailSteps, 1);
+        StringBuilder builder = new StringBuilder();
+        if (!headSteps.isEmpty()) {
+            builder.append(headSteps.poll().getLogs()).append("\n");
+        }
+        String separator = StringUtils.getStringOfChar('.', 35);
+        if (!builder.isEmpty()) {
+            builder.append(separator).append(" truncated ").append(separator).append("\n");
+        }
+        if (!tailSteps.isEmpty()) {
+            builder.append(tailSteps.poll().getLogs());
+        }
+        return builder.toString();
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                .add("id", getId())
+                .add("name", getName())
+                .add("executable", getExecutable())
+                .toString();
     }
 
     /**
@@ -97,7 +162,8 @@ public abstract class BuildTool extends Tool<BuildTool> {
         return new BuildExecution(this, launcher.getName()).setLauncher(launcher);
     }
 
-    private void extractSteps(BuildExecution execution, Queue<BuildStep> steps, int maximumSteps) {
+
+    private void extractSteps(BuildExecution execution, Queue<BuildStep> headSteps, Queue<BuildStep> tailSteps, int maximumSteps) {
         int index = 1;
         String moduleName = null;
         BuildStep currentStep = new BuildStep(NA_STRING).setModule(execution.getProject().isPresent() ? execution.getProject().get().getName() : NA_STRING);
@@ -109,7 +175,7 @@ public abstract class BuildTool extends Tool<BuildTool> {
             if (buildLine.getType() == BuildLine.Type.MODULE) {
                 moduleName = buildLine.getName();
             } else if (buildLine.getType() == BuildLine.Type.PLUGIN) {
-                appendStep(steps, currentStep, maximumSteps);
+                appendStep(headSteps, tailSteps, currentStep, maximumSteps);
                 currentStep = new BuildStep(buildLine.getName()).setModule(moduleName);
             } else {
                 if (currentStep != null) {
@@ -117,12 +183,15 @@ public abstract class BuildTool extends Tool<BuildTool> {
                 }
             }
         }
-        appendStep(steps, currentStep, maximumSteps);
+        appendStep(headSteps, tailSteps, currentStep, maximumSteps);
     }
 
-    private void appendStep(Queue<BuildStep> steps, BuildStep step, int maximumSteps) {
+    private void appendStep(Queue<BuildStep> headSteps, Queue<BuildStep> tailSteps, BuildStep step, int maximumSteps) {
         if (step == null) return;
-        steps.add(step);
-        if (steps.size() > maximumSteps) steps.poll();
+        if (headSteps != null && headSteps.size() < maximumSteps) headSteps.add(step);
+        if (tailSteps != null) {
+            tailSteps.add(step);
+            if (tailSteps.size() > maximumSteps) tailSteps.poll();
+        }
     }
 }
