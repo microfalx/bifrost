@@ -50,33 +50,37 @@ public class BuildCommand extends RunnableCommand {
 
     private String createBuildMessage() {
         String action;
-        if (!push) {
-            action = "building";
+        if (release) {
+            action = "releasing";
+        } else if (push) {
+            action = "deploying";
         } else {
-            action = release ? "releasing" : "deploying";
+            action = "building";
         }
         StringBuilder builder = new StringBuilder();
         builder.append(action).append(" project");
         if (clean) builder.append(" clean");
-        builder.append(' ');
         return builder.toString();
     }
 
     private BuildExecution startExecuting() {
         Console console = getConsole();
-        console.print(createBuildMessage())
+        console.print(createBuildMessage()).printSpace()
                 .printQuote().printBold(project.getName()).printQuote();
+        String version = " (" + project.getVersion().orElseThrow() + ") ";
+        console.print(version);
         BuildExecution execution;
-        if (!push) {
-            execution = buildTool.build();
+        if (release) {
+            console.printLn();
+            execution = buildTool.release();
         } else {
-            if (release) {
-                execution = buildTool.release();
-            } else {
+            console.printDots();
+            if (push) {
                 execution = buildTool.deploy();
+            } else {
+                execution = buildTool.build();
             }
         }
-        console.printDots();
         execution.setProject(project);
         return execution;
     }
@@ -84,6 +88,9 @@ public class BuildCommand extends RunnableCommand {
     private void completeExecution(BuildExecution execution) {
         Console console = getConsole();
         int exitCode = getConsole().execute(execution::waitFor);
+        if (release) {
+            console.print("Project was released...");
+        }
         console.printExitCode(exitCode);
         if (exitCode > 0) {
             String log = insertSpaces(execution.getFirstAndLastStepLogs(), 2, true);
@@ -124,6 +131,7 @@ public class BuildCommand extends RunnableCommand {
             getConsole().print(update.getFileCount() + "/" + update.getInsertionCount() + "/" + update.getDeletionCount());
             getConsole().print(")");
         }
+        project = buildTool.getProject();
     }
 
     private void loadProject(BuildTool buildTool) {

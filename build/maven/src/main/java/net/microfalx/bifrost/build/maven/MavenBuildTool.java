@@ -87,6 +87,7 @@ public class MavenBuildTool extends BuildTool {
     @Override
     protected void updateLauncher(ProcessLauncher launcher) {
         super.updateLauncher(launcher);
+        launcher.addArgument("-Dtalos.quiet=false");
         if (isClean()) launcher.addArgument("clean");
     }
 
