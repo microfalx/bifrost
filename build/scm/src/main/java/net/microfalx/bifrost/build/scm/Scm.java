@@ -10,6 +10,7 @@ import net.microfalx.bootstrap.core.process.ProcessLauncher;
 import net.microfalx.lang.ObjectUtils;
 
 import java.io.File;
+import java.util.Set;
 
 /**
  * Base class for all SCM tools.
@@ -23,6 +24,20 @@ public abstract class Scm extends Tool<Scm> {
     public Scm(String id, String name) {
         super(id, name);
     }
+
+    /**
+     * Returns the branches available in the project.
+     *
+     * @return a non-null instance
+     */
+    public abstract Set<String> getBranches(Project project);
+
+    /**
+     * Returns the tags available in the project.
+     *
+     * @return a non-null instance
+     */
+    public abstract Set<String> getTags(Project project);
 
     /**
      * Downloads a working copy of the project
@@ -103,7 +118,7 @@ public abstract class Scm extends Tool<Scm> {
      * @return the directory
      */
     protected final File getWorkspace(Project project) {
-        if (getWorkingDirectory() != null) {
+        if (hasWorkingDirectory()) {
             return getWorkingDirectory();
         } else {
             return scmService.getWorkspace(project);
@@ -146,13 +161,14 @@ public abstract class Scm extends Tool<Scm> {
      *
      * @param launcher the launcher
      */
-    protected final void execute(ProcessLauncher launcher) {
+    protected final ProcessLauncher execute(ProcessLauncher launcher) {
         launcher.start(false);
         int exitCode = launcher.waitFor();
         if (exitCode != 0) {
             throw new ScmException("Command failed with exit code " + exitCode)
                     .setLog(launcher.getLogsAsString());
         }
+        return launcher;
     }
 
     /**

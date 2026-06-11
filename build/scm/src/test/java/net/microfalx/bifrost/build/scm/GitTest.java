@@ -14,7 +14,9 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 
 import java.io.File;
+import java.util.Set;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 
@@ -32,10 +34,18 @@ class GitTest extends ServiceUnitTestCase {
     @BeforeEach
     void setup() {
         project = Project.builder("bootstrap-demo").repository("https://github.com/adrian-tarau/bootstrap-demo.git").build();
-        File workspace = new File(JvmUtils.getTemporaryDirectory(), "bootstrap-demo-" + IdGenerator.get().nextAsString());
+        File workspace = new File(JvmUtils.getTemporaryDirectory(), "bootstrap-demo-" + getId());
         doReturn(workspace).when(service).getWorkspace(any(Project.class));
         git.scmService = service;
     }
+
+    @Test
+    void getBranches() {
+        Set<String> branches = git.getBranches(project);
+        assertThat(branches.size()).isEqualTo(1);
+        assertThat(branches).containsAnyOf("1.0");
+    }
+
 
     @Test
     void download() {
@@ -57,9 +67,14 @@ class GitTest extends ServiceUnitTestCase {
 
     private void assertWorkspace() {
         File workspace = git.getWorkspace(project);
-        Assertions.assertThat(workspace.exists()).isTrue();
+        assertThat(workspace.exists()).isTrue();
         File[] files = ObjectUtils.defaultIfNull(workspace.listFiles(), new File[0]);
-        Assertions.assertThat(files.length).isGreaterThan(5);
+        assertThat(files.length).isGreaterThan(5);
+    }
+
+    private static String getId() {
+        return Long.toString(System.currentTimeMillis(), Character.MAX_RADIX)
+                + "-" + IdGenerator.get().nextAsString();
     }
 
 }

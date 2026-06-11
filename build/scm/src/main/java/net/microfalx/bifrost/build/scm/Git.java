@@ -6,8 +6,11 @@ import net.microfalx.lang.JvmUtils;
 import net.microfalx.lang.NumberUtils;
 import org.springframework.stereotype.Component;
 
+import java.util.Objects;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import static net.microfalx.lang.NumberUtils.toNumber;
 
@@ -16,6 +19,28 @@ public class Git extends Scm {
 
     public Git() {
         super("git", "Git");
+    }
+
+    @Override
+    public Set<String> getBranches(Project project) {
+        downloadIfRequired(project);
+        update(project);
+        ProcessLauncher launcher = updateWorkingDirectory(createLauncher(), project)
+                .addArgument("branch").addArgument("-r");
+        String output = execute(launcher).getLogsAsString();
+        return output.lines().map(this::getVersionFromBranchOutput)
+                .filter(Objects::nonNull).collect(Collectors.toSet());
+    }
+
+    @Override
+    public Set<String> getTags(Project project) {
+        downloadIfRequired(project);
+        update(project);
+        ProcessLauncher launcher = updateWorkingDirectory(createLauncher(), project)
+                .addArgument("tag").addArgument("-l");
+        String output = execute(launcher).getLogsAsString();
+        return output.lines().map(this::getVersionFromBranchOutput)
+                .filter(Objects::nonNull).collect(Collectors.toSet());
     }
 
     @Override
@@ -138,6 +163,16 @@ public class Git extends Scm {
         }
     }
 
+    private String getVersionFromBranchOutput(String line) {
+        Matcher matcher = GET_BRANCH_VERSION.matcher(line);
+        if (matcher.find()) {
+            return matcher.group(1);
+        } else {
+            return null;
+        }
+    }
+
     private static final Pattern UPDATE_OUTPUT = Pattern.compile("(?:(\\d+)\\s+file(?:s)? changed)?(?:.*(\\d+)\\s+insertion(?:s)?(?:\\(\\+\\))?)?(?:.*(\\d+)\\s+deletion(?:s)?(?:\\(\\-\\))?)?\n");
+    private static final Pattern GET_BRANCH_VERSION = Pattern.compile("(?i:r|v)?(\\d+\\.\\d+.*?)(?=/|$)");
 
 }
