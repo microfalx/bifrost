@@ -26,6 +26,12 @@ public abstract class Scm extends Tool<Scm> {
     }
 
     /**
+     * Returns the current branch name.
+     * @return a non-null instance
+     */
+    public abstract String getCurrentBranch(Project project);
+
+    /**
      * Returns the branches available in the project.
      *
      * @return a non-null instance

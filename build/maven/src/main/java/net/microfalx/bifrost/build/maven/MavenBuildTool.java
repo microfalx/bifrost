@@ -4,6 +4,7 @@ import net.microfalx.bifrost.api.Project;
 import net.microfalx.bifrost.build.BuildExecution;
 import net.microfalx.bifrost.build.BuildLine;
 import net.microfalx.bifrost.build.BuildTool;
+import net.microfalx.bifrost.build.scm.Scm;
 import net.microfalx.bootstrap.core.process.ProcessLauncher;
 import net.microfalx.lang.JvmUtils;
 import org.springframework.stereotype.Component;
@@ -43,8 +44,8 @@ public class MavenBuildTool extends BuildTool {
     @Override
     public Project getProject() {
         Project project = mavenLoader.getProject(new File(getWorkingDirectory(), "pom.xml"));
-        // get the project branch
-        return project;
+        Scm scm = getScm(project);
+        return project.withBranch(scm.getCurrentBranch(project));
     }
 
     @Override

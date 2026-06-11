@@ -4,6 +4,7 @@ import net.microfalx.bifrost.api.Project;
 import net.microfalx.bootstrap.core.process.ProcessLauncher;
 import net.microfalx.lang.JvmUtils;
 import net.microfalx.lang.NumberUtils;
+import net.microfalx.lang.StringUtils;
 import org.springframework.stereotype.Component;
 
 import java.util.Objects;
@@ -19,6 +20,19 @@ public class Git extends Scm {
 
     public Git() {
         super("git", "Git");
+    }
+
+    @Override
+    public String getCurrentBranch(Project project) {
+        downloadIfRequired(project);
+        update(project);
+        ProcessLauncher launcher = updateWorkingDirectory(createLauncher(), project)
+                .addArgument("branch").addArgument("--show-current");
+        String output = StringUtils.trim(execute(launcher).getLogsAsString());
+        if (StringUtils.isEmpty(output)) {
+            throw new ScmException("Empty branch name for " + project.getName());
+        }
+        return output;
     }
 
     @Override

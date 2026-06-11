@@ -42,12 +42,13 @@ class MavenReleaseTest extends ServiceUnitTestCase {
 
         buildTool.setWorkingDirectory(workspace);
         release = new MavenRelease(buildTool);
-        release.setProject(buildTool.getProject().withBranch("release_test"));
 
         doReturn(buildTool.getWorkingDirectory()).when(scmService).getWorkspace(any(Project.class));
         doReturn(scm).when(scmService).detect(any(Project.class));
         doReturn(scm).when(scmService).detect(any(File.class));
         Reflect.on(buildTool).set("scmService", scmService);
+
+        release.setProject(buildTool.getProject());
     }
 
     @Test
