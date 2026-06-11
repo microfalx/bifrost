@@ -42,7 +42,9 @@ public class MavenBuildTool extends BuildTool {
 
     @Override
     public Project getProject() {
-        return mavenLoader.getProject(new File(getWorkingDirectory(), "pom.xml"));
+        Project project = mavenLoader.getProject(new File(getWorkingDirectory(), "pom.xml"));
+        // get the project branch
+        return project;
     }
 
     @Override

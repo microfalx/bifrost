@@ -74,4 +74,13 @@ public class BuildExecution extends Execution<BuildTool, BuildExecution> {
     public String getFirstAndLastStepLogs() {
         return getTool().getFirstAndLastStepLogs(this);
     }
+
+    /**
+     * Returns a project or fails.
+     *
+     * @return a non-null instance
+     */
+    protected final Project getProjectOrFail() {
+        return getProject().orElseThrow();
+    }
 }

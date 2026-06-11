@@ -62,6 +62,13 @@
             <version>${maven.version}</version>
         </dependency>
 
+        <!-- Testing -->
+
+        <dependency>
+            <groupId>net.microfalx.bootstrap</groupId>
+            <artifactId>bootstrap-base-test</artifactId>
+        </dependency>
+
     </dependencies>
 
 </project>
