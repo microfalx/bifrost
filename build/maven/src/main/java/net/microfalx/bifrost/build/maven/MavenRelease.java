@@ -30,9 +30,6 @@ public class MavenRelease extends BuildExecution {
     public int waitFor() {
         int exitCode = validate();
         if (exitCode != 0) return exitCode;
-        exitCode = switchToBranch();
-        reloadProject();
-        if (exitCode != 0) return exitCode;
         exitCode = updateGaVersionForProject(VersionType.GA);
         if (exitCode != 0) return exitCode;
         exitCode = updateGaVersionForThirdParties();
