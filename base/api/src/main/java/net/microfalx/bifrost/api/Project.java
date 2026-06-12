@@ -27,16 +27,16 @@ public class Project extends NamedAndTaggedIdentifyAware<String> {
         return new Builder(id);
     }
 
-    private URI repository;
+    private String repository;
     private String branch;
     private String version;
 
     /**
-     * Returns the URI of the code repository.
+     * Returns the URI(ish) of the code repository.
      *
      * @return a non-null instance
      */
-    public URI getRepository() {
+    public String getRepository() {
         return repository;
     }
 
@@ -84,7 +84,7 @@ public class Project extends NamedAndTaggedIdentifyAware<String> {
 
     public static class Builder extends NamedAndTaggedIdentifyAware.Builder<String> {
 
-        private URI repository;
+        private String repository;
         private String branch = "main";
         private String version;
 
@@ -93,10 +93,6 @@ public class Project extends NamedAndTaggedIdentifyAware<String> {
         }
 
         public Builder repository(String repository) {
-            return repository(UriUtils.parseUri(requireNonNull(repository)));
-        }
-
-        public Builder repository(URI repository) {
             this.repository = requireNonNull(repository);
             return this;
         }

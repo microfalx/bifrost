@@ -28,7 +28,7 @@ class MavenLoaderTest {
         assertNotNull(project);
         assertNotNull(project.getId());
         assertEquals("Bifrost :: Build :: Maven", project.getName());
-        Assertions.assertThat(project.getRepository().toASCIIString()).contains("https://github.com/microfalx/bifrost");
+        Assertions.assertThat(project.getRepository()).contains("https://github.com/microfalx/bifrost");
     }
 
 }
