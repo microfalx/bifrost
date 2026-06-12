@@ -68,6 +68,7 @@
     <properties>
         <bootstrap.version>1.1.0-SNAPSHOT</bootstrap.version>
         <maven.version>3.9.8</maven.version>
+        <maven.resolver.version>1.9.27</maven.resolver.version>
         <spring.boot.version>3.5.4</spring.boot.version>
     </properties>
 
