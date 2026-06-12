@@ -91,11 +91,11 @@ public class ScmService implements InitializingBean {
      */
     public Scm detect(Project project) {
         requireNonNull(project);
-        URI repository = project.getRepository();
+        String repository = project.getRepository();
         if (repository == null) {
             throw new ScmException("No repository found for project '" + project.getName() + "'");
         }
-        String path = defaultIfEmpty(repository.getPath(), UriUtils.SLASH);
+        String path = defaultIfEmpty(repository, UriUtils.SLASH);
         if (path.toLowerCase().endsWith(".git")) {
             return getTool("git");
         } else {

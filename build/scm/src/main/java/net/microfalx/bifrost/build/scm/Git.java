@@ -3,7 +3,6 @@ package net.microfalx.bifrost.build.scm;
 import net.microfalx.bifrost.api.Project;
 import net.microfalx.bootstrap.core.process.ProcessLauncher;
 import net.microfalx.lang.JvmUtils;
-import net.microfalx.lang.NumberUtils;
 import net.microfalx.lang.StringUtils;
 import org.springframework.stereotype.Component;
 
@@ -53,14 +52,14 @@ public class Git extends Scm {
         ProcessLauncher launcher = updateWorkingDirectory(createLauncher(), project)
                 .addArgument("tag").addArgument("-l");
         String output = execute(launcher).getLogsAsString();
-        return output.lines().map(this::getVersionFromBranchOutput)
+        return output.lines().map(this::getVersionFromTagOutput)
                 .filter(Objects::nonNull).collect(Collectors.toSet());
     }
 
     @Override
     public void download(Project project) {
         ProcessLauncher launcher = createLauncher().addArgument("clone")
-                .addArgument(project.getRepository().toASCIIString())
+                .addArgument(project.getRepository())
                 .addArgument(getWorkspace(project).getAbsolutePath());
         execute(launcher);
     }
@@ -82,6 +81,17 @@ public class Git extends Scm {
     @Override
     public void tag(Project project, String name) {
         downloadIfRequired(project);
+        // first tag
+        ProcessLauncher launcher = updateWorkingDirectory(createLauncher(), project)
+                .addArgument("tag").addArgument("-a")
+                .addArgument("-m").addArgument("Release version " + name)
+                .addArgument(name);
+        execute(launcher);
+        // second, push to remote repo
+        launcher = updateWorkingDirectory(createLauncher(), project)
+                .addArgument("push").addArgument("origin")
+                .addArgument(name);
+        execute(launcher);
     }
 
     @Override
@@ -105,7 +115,7 @@ public class Git extends Scm {
         downloadIfRequired(project);
         // commit in local repo
         ProcessLauncher launcher = updateWorkingDirectory(createLauncher(), project)
-                .addArgument("commit")
+                .addArgument("commit").addArgument("-a")
                 .addArgument("-m").addArgument(message);
         execute(launcher);
         // push to remote repo
@@ -186,7 +196,17 @@ public class Git extends Scm {
         }
     }
 
+    private String getVersionFromTagOutput(String line) {
+        Matcher matcher = GET_BRANCH_VERSION.matcher(line);
+        if (matcher.find()) {
+            return matcher.group(1);
+        } else {
+            return null;
+        }
+    }
+
     private static final Pattern UPDATE_OUTPUT = Pattern.compile("(?:(\\d+)\\s+file(?:s)? changed)?(?:.*(\\d+)\\s+insertion(?:s)?(?:\\(\\+\\))?)?(?:.*(\\d+)\\s+deletion(?:s)?(?:\\(\\-\\))?)?\n");
     private static final Pattern GET_BRANCH_VERSION = Pattern.compile("(?i:r|v)?(\\d+\\.\\d+.*?)(?=/|$)");
+    private static final Pattern GET_TAG_VERSION = Pattern.compile("(?i:r|v)?(\\d+\\.\\d+.*?)(?=/|$)");
 
 }
