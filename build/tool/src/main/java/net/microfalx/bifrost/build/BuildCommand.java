@@ -12,6 +12,7 @@ import picocli.CommandLine;
 import java.io.File;
 import java.io.IOException;
 
+import static net.microfalx.lang.StringUtils.isNotEmpty;
 import static net.microfalx.lang.TextUtils.insertSpaces;
 
 @Component
@@ -30,6 +31,12 @@ public class BuildCommand extends RunnableCommand {
 
     @CommandLine.Option(names = {"-r", "--release"}, description = "Builds, releases and deploys artifacts in remote repository")
     private boolean release;
+
+    @CommandLine.Option(names = {"-b", "--branch"}, description = "The active branch (defaults to main")
+    private String branch;
+
+    @CommandLine.Option(names = {"-y", "--yes"}, description = "Approve all questions with default safe values")
+    private boolean yes;
 
     @CommandLine.Option(names = {"-d", "--directroy"}, description = "The directory where the project is located (instead of the working directory")
     private String workingDirectory;
@@ -67,11 +74,10 @@ public class BuildCommand extends RunnableCommand {
         Console console = getConsole();
         console.print(createBuildMessage()).printSpace()
                 .printQuote().printBold(project.getName()).printQuote();
-        String version = " (" + project.getVersion().orElseThrow() + ") ";
+        String version = " (" + project.getBranch() + " / " + project.getVersion().orElseThrow() + ")";
         console.print(version);
         BuildExecution execution;
         if (release) {
-            console.printLn();
             execution = buildTool.release();
         } else {
             console.printDots();
@@ -89,7 +95,7 @@ public class BuildCommand extends RunnableCommand {
         Console console = getConsole();
         int exitCode = getConsole().execute(execution::waitFor);
         if (release) {
-            console.print("Project was released...");
+            console.print("Project was" + (exitCode > 0 ? " not" : "") + " released...");
         }
         console.printExitCode(exitCode);
         if (exitCode > 0) {
@@ -104,11 +110,12 @@ public class BuildCommand extends RunnableCommand {
 
     private void initBuildTool() {
         File workingDirectory = getFinalWorkingDirectory();
-        LOGGER.info("Execute 'build' command with arguments: clean={}, push={}, release={}, verbose={}, working directory={}",
-                clean, push, release, verbose, workingDirectory);
+        LOGGER.info("Execute 'build' command with arguments: clean={}, push={}, release={}, verbose={}, " +
+                "branch: {}, working directory={}", clean, push, release, verbose, branch, workingDirectory);
         buildTool = buildService.detect(workingDirectory);
         buildTool.setWorkingDirectory(workingDirectory);
         buildTool.setClean(clean);
+        buildTool.setYes(yes);
         buildTool.setConsole(getConsole());
     }
 
@@ -132,6 +139,18 @@ public class BuildCommand extends RunnableCommand {
             getConsole().print(")");
         }
         project = buildTool.getProject();
+        if (isNotEmpty(branch)) {
+            // switch branch and checkout
+            project = project.withBranch(branch);
+            scm.checkout(project);
+            // re-read the project info
+            project = buildTool.getProject();
+            if (!project.getBranch().equals(branch)) {
+                getConsole().printFailure("invalid state");
+                throw new BuildException("Invalid project state, requested branch '" + branch
+                        + "', current branch '" + project.getBranch() + "'");
+            }
+        }
     }
 
     private void loadProject(BuildTool buildTool) {

@@ -11,6 +11,7 @@ import net.microfalx.lang.Version;
 
 import java.util.function.Supplier;
 
+import static net.microfalx.lang.StringUtils.defaultIfEmpty;
 import static net.microfalx.lang.TextUtils.insertSpaces;
 
 /**
@@ -19,6 +20,7 @@ import static net.microfalx.lang.TextUtils.insertSpaces;
 public class MavenRelease extends BuildExecution {
 
     private Scm cachedScm;
+    private String errorMessage;
 
     public MavenRelease(BuildTool tool) {
         super(tool, "mvn release");
@@ -26,7 +28,10 @@ public class MavenRelease extends BuildExecution {
 
     @Override
     public int waitFor() {
-        int exitCode = switchToBranch();
+        int exitCode = validate();
+        if (exitCode != 0) return exitCode;
+        exitCode = switchToBranch();
+        reloadProject();
         if (exitCode != 0) return exitCode;
         exitCode = updateGaVersionForProject(VersionType.GA);
         if (exitCode != 0) return exitCode;
@@ -37,11 +42,30 @@ public class MavenRelease extends BuildExecution {
         return exitCode;
     }
 
+    @Override
+    public String getFirstAndLastStepLogs() {
+        return defaultIfEmpty(errorMessage, "No additional information is available");
+    }
+
+    private int validate() {
+        getConsole().printDots().printLn("prepare and validate:");
+        String branch = getProjectOrFail().getBranch();
+        if ("main".equals(branch)) {
+            errorMessage = "A release cannot be performed from 'main' branch";
+            return 1;
+        }
+        return 0;
+    }
+
     private int switchToBranch() {
         getConsole().printTab().printBullet().print("Switch project to branch ").printQuote()
                 .printBold(getProjectOrFail().getBranch()).printQuote().printDots();
         Scm scm = createScm();
         return handleRunnable(() -> execute(() -> scm.checkout(getProjectOrFail())));
+    }
+
+    private void reloadProject() {
+        setProject(getTool().getProject());
     }
 
     private int updateGaVersionForProject(VersionType versionType) {
