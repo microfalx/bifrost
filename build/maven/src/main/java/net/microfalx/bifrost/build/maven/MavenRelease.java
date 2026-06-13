@@ -15,6 +15,8 @@ import java.io.IOException;
 import java.io.StringReader;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Collections;
+import java.util.Set;
 import java.util.function.Supplier;
 
 import static net.microfalx.lang.IOUtils.appendStream;
@@ -32,6 +34,8 @@ public class MavenRelease extends BuildExecution {
 
     private Version gaVersion;
     private Version developmentVersion;
+
+    private Set<String> tags = Collections.emptySet();
 
     public MavenRelease(BuildTool tool) {
         super(tool, "mvn release");
@@ -63,11 +67,7 @@ public class MavenRelease extends BuildExecution {
 
     private int validate() {
         getConsole().printDots().printLn("prepare and validate:");
-        String branch = getProjectOrFail().getBranch();
-        if ("main".equals(branch)) {
-            errorMessage = "A release cannot be performed from 'main' branch";
-            return 1;
-        }
+        tags = getScm().getTags(getProjectOrFail());
         return 0;
     }
 

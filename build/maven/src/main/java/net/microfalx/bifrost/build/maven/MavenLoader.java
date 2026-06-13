@@ -1,6 +1,7 @@
 package net.microfalx.bifrost.build.maven;
 
 import net.microfalx.bifrost.api.Project;
+import net.microfalx.lang.EnumUtils;
 import net.microfalx.lang.JvmUtils;
 import org.apache.maven.model.building.ModelBuildingRequest;
 import org.apache.maven.project.*;
@@ -39,8 +40,14 @@ public class MavenLoader {
         Project.Builder builder = Project.builder(MavenUtils.getId(mavenProject.getArtifact()));
         builder.version(mavenProject.getVersion()).name(mavenProject.getName())
                 .description(mavenProject.getDescription());
-        if (mavenProject.getScm() != null && isNotEmpty(mavenProject.getScm().getConnection())) {
-            builder.repository(mavenProject.getScm().getConnection());
+        if (mavenProject.getScm() != null) {
+            String uri = null;
+            if (isNotEmpty(mavenProject.getScm().getDeveloperConnection())) {
+                uri = mavenProject.getScm().getDeveloperConnection();
+            } else if (isNotEmpty(mavenProject.getScm().getConnection())) {
+                uri = mavenProject.getScm().getConnection();
+            }
+            if (uri != null) builder.repository(getRepository(uri));
         }
         return builder.build();
     }
@@ -86,6 +93,24 @@ public class MavenLoader {
             this.session = repoSession;
         } catch (Exception e) {
             throw new MavenException("Failed to initialize Maven", e);
+        }
+    }
+
+    private Project.Repository getRepository(String uri) {
+        String[] parts = splitUri(uri);
+        if (!"scm".equals(parts[0])) return null;
+        parts = splitUri(parts[1]);
+        if (parts.length != 2) return null;
+        Project.Repository.Type type = EnumUtils.fromName(Project.Repository.Type.class, parts[0], Project.Repository.Type.UNKNOWN);
+        return new Project.Repository(type, parts[1]);
+    }
+
+    private String[] splitUri(String uri) {
+        int index = uri.indexOf(':');
+        if (index == -1) {
+            return new String[]{uri};
+        } else {
+            return new String[]{uri.substring(0, index), uri.substring(index + 1)};
         }
     }
 }

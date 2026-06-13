@@ -31,9 +31,8 @@ class MavenReleaseTest extends ServiceUnitTestCase {
     @BeforeEach
     void setup() {
         project = Project.builder("bootstrap-demo")
-                .repository("https://github.com/adrian-tarau/bootstrap-demo.git")
-                .branch("release_test")
-                .build();
+                .repository(Project.Repository.git("git@github.com:adrian-tarau/bootstrap-demo.git"))
+                .branch("release_test").build();
         buildTool = new MavenBuildTool();
         File workspace = validateDirectoryExists(new File(getTemporaryDirectory(), "bootstrap-demo-" + getId()));
         Scm scm = new Git();

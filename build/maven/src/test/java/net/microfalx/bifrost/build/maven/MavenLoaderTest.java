@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import java.io.File;
 
 import static net.microfalx.lang.JvmUtils.getWorkingDirectory;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 
 class MavenLoaderTest {
@@ -28,7 +29,7 @@ class MavenLoaderTest {
         assertNotNull(project);
         assertNotNull(project.getId());
         assertEquals("Bifrost :: Build :: Maven", project.getName());
-        Assertions.assertThat(project.getRepository()).contains("https://github.com/microfalx/bifrost");
+        assertThat(project.getRepository().getUri()).startsWith("https://github.com/microfalx/bifrost");
     }
 
 }

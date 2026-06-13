@@ -1,6 +1,8 @@
 package net.microfalx.bifrost.build;
 
 import com.google.common.base.MoreObjects;
+import net.microfalx.bifrost.api.Project;
+import net.microfalx.bifrost.build.scm.ScmException;
 import net.microfalx.bifrost.build.scm.ScmService;
 import net.microfalx.lang.ClassUtils;
 import net.microfalx.lang.StringUtils;
@@ -79,9 +81,22 @@ public class BuildService implements InitializingBean {
                 + "' is not registered or the directory does not contain a project. Supported build tools: " + supportedBuildTools);
     }
 
+    /**
+     * Loads a project from a directory.
+     *
+     * @param directory the directory
+     * @return a non-null instance
+     */
+    public Project getProject(File directory) {
+        requireNonNull(directory);
+        BuildTool buildTool = detect(directory);
+        return buildTool.getProject(directory);
+    }
+
     @Override
     public void afterPropertiesSet() throws Exception {
         discoverTools();
+        setupCallbacks();
     }
 
     @Override
@@ -100,5 +115,9 @@ public class BuildService implements InitializingBean {
             toolsById.put(tool.getId(), tool);
             tools.add(tool);
         }
+    }
+
+    private void setupCallbacks() {
+        scmService.setProjectLoader(this::getProject);
     }
 }
