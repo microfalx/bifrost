@@ -94,6 +94,8 @@ public class BuildCommand extends RunnableCommand {
     private void completeExecution(BuildExecution execution) {
         Console console = getConsole();
         int exitCode = getConsole().execute(execution::waitFor);
+        // special case, print nothing about the exit code
+        if (exitCode < 0) return;
         if (release) {
             console.print("Project was" + (exitCode > 0 ? " not" : "") + " released...");
         }

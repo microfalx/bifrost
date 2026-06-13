@@ -26,7 +26,15 @@ public abstract class Scm extends Tool<Scm> {
     }
 
     /**
+     * Adds a new file to repository.
+     *
+     * @return {@code true} if the file was added, {@code false} otherwise
+     */
+    public abstract boolean add(Project project, String path);
+
+    /**
      * Returns the current branch name.
+     *
      * @return a non-null instance
      */
     public abstract String getCurrentBranch(Project project);
@@ -80,8 +88,9 @@ public abstract class Scm extends Tool<Scm> {
      *
      * @param project the project
      * @param message the message to attach to the commit
+     * @param push    {@code true} to push the code too, {@code false}
      */
-    public abstract void commit(Project project, String message);
+    public abstract void commit(Project project, String message, boolean push);
 
     /**
      * Reverts the local changes to the workspace.
@@ -114,8 +123,9 @@ public abstract class Scm extends Tool<Scm> {
      *
      * @param project the project
      * @param name    the name of the tag
+     * @param message the message to attach to the tag
      */
-    public abstract void tag(Project project, String name);
+    public abstract void tag(Project project, String name, String message);
 
     /**
      * Returns the workspace for a project.

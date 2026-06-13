@@ -1,5 +1,6 @@
 package net.microfalx.bifrost.build.maven;
 
+import net.microfalx.bifrost.build.BuildException;
 import net.microfalx.bifrost.build.BuildExecution;
 import net.microfalx.bifrost.build.BuildTool;
 import net.microfalx.bifrost.build.scm.Scm;
@@ -9,8 +10,15 @@ import net.microfalx.bootstrap.core.process.ProcessLauncher;
 import net.microfalx.lang.ExceptionUtils;
 import net.microfalx.lang.Version;
 
+import java.io.File;
+import java.io.IOException;
+import java.io.StringReader;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.function.Supplier;
 
+import static net.microfalx.lang.IOUtils.appendStream;
+import static net.microfalx.lang.IOUtils.getBufferedWriter;
 import static net.microfalx.lang.StringUtils.defaultIfEmpty;
 import static net.microfalx.lang.TextUtils.insertSpaces;
 
@@ -22,6 +30,9 @@ public class MavenRelease extends BuildExecution {
     private Scm cachedScm;
     private String errorMessage;
 
+    private Version gaVersion;
+    private Version developmentVersion;
+
     public MavenRelease(BuildTool tool) {
         super(tool, "mvn release");
     }
@@ -30,12 +41,18 @@ public class MavenRelease extends BuildExecution {
     public int waitFor() {
         int exitCode = validate();
         if (exitCode != 0) return exitCode;
-        exitCode = updateGaVersionForProject(VersionType.GA);
+        exitCode = updateGaVersionForProject();
         if (exitCode != 0) return exitCode;
         exitCode = updateGaVersionForThirdParties();
         if (exitCode != 0) return exitCode;
         exitCode = buildProject();
         if (exitCode != 0) return exitCode;
+        if (!confirm()) return -1;
+        exitCode = commitAndTag();
+        if (exitCode != 0) return exitCode;
+        exitCode = updateDevelopmentVersionForProject();
+        if (exitCode != 0) return exitCode;
+        exitCode = commit(VersionType.NEXT_PATCH);
         return exitCode;
     }
 
@@ -54,26 +71,30 @@ public class MavenRelease extends BuildExecution {
         return 0;
     }
 
-    private int switchToBranch() {
-        getConsole().printTab().printBullet().print("Switch project to branch ").printQuote()
-                .printBold(getProjectOrFail().getBranch()).printQuote().printDots();
-        Scm scm = createScm();
-        return handleRunnable(() -> execute(() -> scm.checkout(getProjectOrFail())));
+    private boolean confirm() {
+        if (getTool().isYes()) return true;
+        getConsole().printTab().printBullet().print("Validation is successful, release? (y/n): ");
+        String answer = getConsole().readLine().toLowerCase();
+        boolean yes = "yes".equals(answer) || "y".equals(answer);
+        if (!yes) {
+            getConsole().printWarning("Release was cancelled").printLn();
+        }
+        return yes;
     }
 
-    private void reloadProject() {
-        setProject(getTool().getProject());
-    }
-
-    private int updateGaVersionForProject(VersionType versionType) {
+    private int updateGaVersionForProject() {
         Version parsedVersion = Version.parse(getProjectOrFail().getVersion().orElseThrow());
-        Version version = updateVersion(parsedVersion, versionType);
+        gaVersion = updateVersion(parsedVersion, VersionType.GA);
         getConsole().printTab().printBullet()
-                .print("Update project version to GA (" + version + ")").printDots();
-        ProcessLauncher launcher = createLauncher().addArgument("-DgenerateBackupPoms=false")
-                .addArgument("-Dtalos.quiet=false").addArgument("-DnewVersion=" + version.toString())
-                .addArgument("versions:set");
-        return handleExitCode(execute(launcher));
+                .print("Update project version to GA (" + gaVersion + ")").printDots();
+        return updateVersion(gaVersion);
+    }
+
+    private int updateDevelopmentVersionForProject() {
+        developmentVersion = updateVersion(gaVersion, VersionType.NEXT_PATCH);
+        getConsole().printTab().printBullet()
+                .print("Update project version for development  (" + developmentVersion + ")").printDots();
+        return updateVersion(developmentVersion);
     }
 
     private int updateGaVersionForThirdParties() {
@@ -93,12 +114,48 @@ public class MavenRelease extends BuildExecution {
         }));
     }
 
+    private int commitAndTag() {
+        writeSignature();
+        int exitCode = commit(VersionType.GA);
+        if (exitCode != 0) return exitCode;
+        return tag();
+    }
+
+    private int commit(VersionType version) {
+        String message = switch (version) {
+            case GA -> "Release " + gaVersion;
+            case NEXT_PATCH -> "Next release " + developmentVersion.toMaven();
+            case NEXT_MAJOR, NEXT_MINOR -> "Next development " + developmentVersion.toMaven();
+        };
+        getConsole().printTab().printBullet().print("Commit").printDots();
+        return handleRunnable(() -> {
+            Scm scm = getScm();
+            scm.commit(getProjectOrFail(), message, true);
+        }, version != VersionType.GA);
+    }
+
+    private int tag() {
+        getConsole().printDots().print("Tag").printDots();
+        return handleRunnable(() -> {
+            Scm scm = getScm();
+            scm.tag(getProjectOrFail(), "v" + gaVersion.toString(), "Release " + gaVersion);
+        });
+    }
+
     private Version updateVersion(Version version, VersionType versionType) {
         return switch (versionType) {
             case GA -> version.withSnapshot(false);
-            case NEXT_MAJOR -> version.withMajor(version.getMajor() + 1).withMinor(0).withPatch(0).withSnapshot(true);
+            case NEXT_PATCH -> version.withPatch(version.getPatch() + 1).withSnapshot(true);
             case NEXT_MINOR -> version.withMinor(version.getMinor() + 1).withPatch(0).withSnapshot(true);
+            case NEXT_MAJOR -> version.withMajor(version.getMajor() + 1).withMinor(0).withPatch(0).withSnapshot(true);
         };
+    }
+
+    private int updateVersion(Version version) {
+        ProcessLauncher launcher = createLauncher().addArgument("-DgenerateBackupPoms=false")
+                .addArgument("-Dtalos.quiet=false").addArgument("-DnewVersion=" + version.toMaven())
+                .addArgument("versions:set");
+        return handleExitCode(execute(launcher));
     }
 
     private ProcessLauncher createLauncher() {
@@ -107,9 +164,20 @@ public class MavenRelease extends BuildExecution {
         return launcher;
     }
 
-    private Scm createScm() {
+    private Scm getScm() {
         if (cachedScm == null) cachedScm = getTool().getScm(getProjectOrFail());
         return cachedScm;
+    }
+
+    private void writeSignature() {
+        File file = new File(getTool().getWorkingDirectory(), ".bifrost");
+        String signature = "Release Time: " + DateTimeFormatter.ISO_DATE_TIME.format(LocalDateTime.now());
+        try {
+            appendStream(getBufferedWriter(file), new StringReader(signature));
+            getScm().add(getProjectOrFail(), ".bifrost");
+        } catch (IOException e) {
+            throw new BuildException("Failed to write release signature");
+        }
     }
 
     private int handleExitCode(int exitCode) {
@@ -123,17 +191,21 @@ public class MavenRelease extends BuildExecution {
     }
 
     private int handleRunnable(Runnable runnable) {
+        return handleRunnable(runnable, true);
+    }
+
+    private int handleRunnable(Runnable runnable, boolean newLine) {
         Console console = getConsole();
         Throwable throwable = null;
         int exitCode;
         try {
-            runnable.run();
+            execute(runnable::run);
             exitCode = 0;
         } catch (Exception e) {
             throwable = e;
             exitCode = 1;
         }
-        console.printExitCode(exitCode);
+        console.printExitCode(exitCode, newLine);
         if (exitCode > 0) {
             String log;
             if (throwable instanceof CliException clie) {
@@ -160,9 +232,10 @@ public class MavenRelease extends BuildExecution {
     }
 
     enum VersionType {
-        GA,
+        NEXT_PATCH,
         NEXT_MINOR,
-        NEXT_MAJOR
+        NEXT_MAJOR,
+        GA
     }
 
 

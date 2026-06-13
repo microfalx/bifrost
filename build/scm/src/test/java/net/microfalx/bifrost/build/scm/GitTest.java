@@ -5,17 +5,14 @@ import net.microfalx.bootstrap.resource.ResourceService;
 import net.microfalx.bootstrap.test.ServiceUnitTestCase;
 import net.microfalx.bootstrap.test.annotation.Prepare;
 import net.microfalx.bootstrap.test.annotation.Subject;
-import net.microfalx.lang.IOUtils;
 import net.microfalx.lang.IdGenerator;
 import net.microfalx.lang.JvmUtils;
 import net.microfalx.lang.ObjectUtils;
-import org.apache.commons.io.function.IOUnaryOperator;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
-import org.springframework.util.StreamUtils;
 
 import java.io.File;
 import java.io.IOException;
@@ -25,7 +22,8 @@ import java.time.format.DateTimeFormatter;
 import java.util.Set;
 
 import static java.lang.System.currentTimeMillis;
-import static net.microfalx.lang.IOUtils.*;
+import static net.microfalx.lang.IOUtils.appendStream;
+import static net.microfalx.lang.IOUtils.getBufferedWriter;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
@@ -94,7 +92,7 @@ class GitTest extends ServiceUnitTestCase {
     @Test
     void commitWithNoChanges() {
         Assertions.assertThatThrownBy(() -> {
-            git.commit(project, "Test commit");
+            git.commit(project, "Test commit", true);
         }).isInstanceOf(ScmException.class);
         assertWorkspace();
     }
@@ -104,7 +102,7 @@ class GitTest extends ServiceUnitTestCase {
         switchToTestBranch();
         appendStream(getBufferedWriter(getFileInWorkspace("test/unit_test.txt")), new StringReader(Long.toString(currentTimeMillis())));
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMddHH");
-        git.commit(project, "Test commit " + formatter.format(LocalDateTime.now()));
+        git.commit(project, "Test commit " + formatter.format(LocalDateTime.now()), true);
         assertWorkspace();
     }
 
@@ -112,14 +110,25 @@ class GitTest extends ServiceUnitTestCase {
     void tag() {
         switchToTestBranch();
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMddHH");
-        git.tag(project, "v" + formatter.format(LocalDateTime.now()));
+        git.tag(project, "v" + formatter.format(LocalDateTime.now()),
+                "Test tag " + formatter.format(LocalDateTime.now()));
+    }
+
+    @Test
+    void add() throws IOException {
+        switchToTestBranch();
+        appendStream(getBufferedWriter(getFileInWorkspace("test/unit_test_added.txt")), new StringReader(Long.toString(currentTimeMillis())));
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMddHH");
+        git.add(project, "test/unit_test_added.txt");
+        git.commit(project, "Test added file " + formatter.format(LocalDateTime.now()), true);
+        assertWorkspace();
     }
 
     @Test
     @Disabled
     void manualTag() {
         switchToTestBranch();
-        git.tag(project, "v1.0.0");
+        git.tag(project, "v1.0.0", "Manual tag");
     }
 
     private void assertWorkspace() {

@@ -22,6 +22,16 @@ public class Git extends Scm {
     }
 
     @Override
+    public boolean add(Project project, String path) {
+        downloadIfRequired(project);
+        update(project);
+        ProcessLauncher launcher = updateWorkingDirectory(createLauncher(), project)
+                .addArgument("add").addArgument(path);
+        execute(launcher);
+        return true;
+    }
+
+    @Override
     public String getCurrentBranch(Project project) {
         downloadIfRequired(project);
         update(project);
@@ -79,12 +89,12 @@ public class Git extends Scm {
     }
 
     @Override
-    public void tag(Project project, String name) {
+    public void tag(Project project, String name, String message) {
         downloadIfRequired(project);
         // first tag
         ProcessLauncher launcher = updateWorkingDirectory(createLauncher(), project)
                 .addArgument("tag").addArgument("-a")
-                .addArgument("-m").addArgument("Release version " + name)
+                .addArgument("-m").addArgument(message)
                 .addArgument(name);
         execute(launcher);
         // second, push to remote repo
@@ -111,17 +121,19 @@ public class Git extends Scm {
     }
 
     @Override
-    public void commit(Project project, String message) {
+    public void commit(Project project, String message, boolean push) {
         downloadIfRequired(project);
         // commit in local repo
         ProcessLauncher launcher = updateWorkingDirectory(createLauncher(), project)
                 .addArgument("commit").addArgument("-a")
                 .addArgument("-m").addArgument(message);
         execute(launcher);
-        // push to remote repo
-        launcher = updateWorkingDirectory(createLauncher(), project)
-                .addArgument("push");
-        execute(launcher);
+        if (push) {
+            // push to remote repo
+            launcher = updateWorkingDirectory(createLauncher(), project)
+                    .addArgument("push");
+            execute(launcher);
+        }
     }
 
     @Override
