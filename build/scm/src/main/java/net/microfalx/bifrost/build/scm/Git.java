@@ -13,6 +13,8 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static net.microfalx.lang.NumberUtils.toNumber;
+import static net.microfalx.lang.StringUtils.defaultIfEmpty;
+import static net.microfalx.lang.StringUtils.isNotEmpty;
 
 @Component
 public class Git extends Scm {
@@ -23,7 +25,7 @@ public class Git extends Scm {
 
     @Override
     public boolean add(Project project, String path) {
-        downloadIfRequired(project);
+        downloadIfRequired(project, DEFAULT_OPTIONS);
         update(project);
         ProcessLauncher launcher = updateWorkingDirectory(createLauncher(), project)
                 .addArgument("add").addArgument(path);
@@ -33,7 +35,7 @@ public class Git extends Scm {
 
     @Override
     public String getCurrentBranch(Project project) {
-        downloadIfRequired(project);
+        downloadIfRequired(project, DEFAULT_OPTIONS);
         update(project);
         ProcessLauncher launcher = updateWorkingDirectory(createLauncher(), project)
                 .addArgument("branch").addArgument("--show-current");
@@ -46,7 +48,7 @@ public class Git extends Scm {
 
     @Override
     public Set<String> getBranches(Project project) {
-        downloadIfRequired(project);
+        downloadIfRequired(project, DEFAULT_OPTIONS);
         update(project);
         ProcessLauncher launcher = updateWorkingDirectory(createLauncher(), project)
                 .addArgument("branch").addArgument("-r");
@@ -57,7 +59,7 @@ public class Git extends Scm {
 
     @Override
     public Set<String> getTags(Project project) {
-        downloadIfRequired(project);
+        downloadIfRequired(project, DEFAULT_OPTIONS);
         update(project);
         ProcessLauncher launcher = updateWorkingDirectory(createLauncher(), project)
                 .addArgument("tag").addArgument("-l");
@@ -67,16 +69,21 @@ public class Git extends Scm {
     }
 
     @Override
-    public void download(Project project) {
-        ProcessLauncher launcher = createLauncher().addArgument("clone")
-                .addArgument(project.getRepository())
+    public void download(Project project, Options options) {
+        ProcessLauncher launcher = createLauncher().addArgument("clone");
+        String tagOrBranch = defaultIfEmpty(options.getTag(), options.getBranch());
+        if (isNotEmpty(tagOrBranch)) {
+            launcher.addArgument("--branch").addArgument(tagOrBranch)
+                    .addArgument("--single-branch").addArgument("--depth").addArgument("1");
+        }
+        launcher.addArgument(project.getRepository().getUri())
                 .addArgument(getWorkspace(project).getAbsolutePath());
         execute(launcher);
     }
 
     @Override
-    public void checkout(Project project) {
-        downloadIfRequired(project);
+    public void checkout(Project project, Options options) {
+        downloadIfRequired(project, options);
         ProcessLauncher launcher = updateWorkingDirectory(createLauncher(), project)
                 .addArgument("checkout")
                 .addArgument(project.getBranch());
@@ -85,12 +92,12 @@ public class Git extends Scm {
 
     @Override
     public void branch(Project project, String name) {
-        downloadIfRequired(project);
+        downloadIfRequired(project, DEFAULT_OPTIONS);
     }
 
     @Override
     public void tag(Project project, String name, String message) {
-        downloadIfRequired(project);
+        downloadIfRequired(project, DEFAULT_OPTIONS);
         // first tag
         ProcessLauncher launcher = updateWorkingDirectory(createLauncher(), project)
                 .addArgument("tag").addArgument("-a")
@@ -106,12 +113,12 @@ public class Git extends Scm {
 
     @Override
     public void status(Project project) {
-        downloadIfRequired(project);
+        downloadIfRequired(project, DEFAULT_OPTIONS);
     }
 
     @Override
     public Update update(Project project) {
-        downloadIfRequired(project);
+        downloadIfRequired(project, DEFAULT_OPTIONS);
         ProcessLauncher launcher = updateWorkingDirectory(createLauncher(), project)
                 .addArgument("pull");
         execute(launcher);
@@ -122,7 +129,7 @@ public class Git extends Scm {
 
     @Override
     public void commit(Project project, String message, boolean push) {
-        downloadIfRequired(project);
+        downloadIfRequired(project, DEFAULT_OPTIONS);
         // commit in local repo
         ProcessLauncher launcher = updateWorkingDirectory(createLauncher(), project)
                 .addArgument("commit").addArgument("-a")
@@ -138,7 +145,7 @@ public class Git extends Scm {
 
     @Override
     public void restore(Project project) {
-        downloadIfRequired(project);
+        downloadIfRequired(project, DEFAULT_OPTIONS);
         // undo local changes
         ProcessLauncher launcher = updateWorkingDirectory(createLauncher(), project)
                 .addArgument("restore")
@@ -150,7 +157,7 @@ public class Git extends Scm {
 
     @Override
     public void reset(Project project) {
-        downloadIfRequired(project);
+        downloadIfRequired(project, DEFAULT_OPTIONS);
         // first synchronize with remote
         ProcessLauncher launcher = updateWorkingDirectory(createLauncher(), project)
                 .addArgument("fetch").addArgument("origin");
@@ -193,7 +200,7 @@ public class Git extends Scm {
         }
     }
 
-    private void downloadIfRequired(Project project) {
+    private void downloadIfRequired(Project project, Options options) {
         if (!hasWorkingCopy(project)) {
             download(project);
         }

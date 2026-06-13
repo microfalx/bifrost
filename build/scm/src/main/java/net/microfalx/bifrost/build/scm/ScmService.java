@@ -1,11 +1,11 @@
 package net.microfalx.bifrost.build.scm;
 
+import com.google.common.base.Function;
 import com.google.common.base.MoreObjects;
 import net.microfalx.bifrost.api.Project;
 import net.microfalx.bootstrap.resource.ResourceService;
 import net.microfalx.lang.ClassUtils;
 import net.microfalx.lang.StringUtils;
-import net.microfalx.lang.UriUtils;
 import net.microfalx.resource.Resource;
 import net.microfalx.resource.ResourceUtils;
 import org.springframework.beans.factory.InitializingBean;
@@ -14,7 +14,6 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
-import java.net.URI;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
@@ -23,7 +22,6 @@ import static java.util.stream.Collectors.joining;
 import static net.microfalx.lang.ArgumentUtils.requireNonNull;
 import static net.microfalx.lang.ArgumentUtils.requireNotEmpty;
 import static net.microfalx.lang.FileUtils.validateDirectoryExists;
-import static net.microfalx.lang.StringUtils.defaultIfEmpty;
 
 @Service
 public class ScmService implements InitializingBean {
@@ -33,6 +31,17 @@ public class ScmService implements InitializingBean {
 
     private final Map<String, Scm> toolsById = new ConcurrentHashMap<>();
     private final Collection<Scm> tools = new CopyOnWriteArraySet<>();
+
+    private Function<File, Project> projectLoader;
+
+    /**
+     * Provides a function to load project from directories.
+     *
+     * @param projectLoader the loader
+     */
+    public void setProjectLoader(Function<File, Project> projectLoader) {
+        this.projectLoader = requireNonNull(projectLoader);
+    }
 
     /**
      * Returns the registered tools.
@@ -73,6 +82,7 @@ public class ScmService implements InitializingBean {
                 try {
                     Scm newTool = ClassUtils.create(tool.getClass());
                     newTool.scmService = this;
+                    newTool.setWorkingDirectory(directory);
                     return newTool;
                 } catch (Exception e) {
                     throw new ScmException("Could not create build tool: " + tool.getName(), e);
@@ -91,17 +101,32 @@ public class ScmService implements InitializingBean {
      */
     public Scm detect(Project project) {
         requireNonNull(project);
-        String repository = project.getRepository();
-        if (repository == null) {
+        Project.Repository repository = project.getRepository();
+        if (repository.getType() == Project.Repository.Type.UNKNOWN) {
+            throw new ScmException("Unknown repository type for project '"
+                    + project.getName() + "', uri '" + repository.getUri() + "'");
+        }
+        if (StringUtils.isEmpty(repository.getUri())) {
             throw new ScmException("No repository found for project '" + project.getName() + "'");
         }
-        String path = defaultIfEmpty(repository, UriUtils.SLASH);
-        if (path.toLowerCase().endsWith(".git")) {
+        if (repository.getType() == Project.Repository.Type.GIT) {
             return getTool("git");
         } else {
             throw new ScmException("A suitable SCM for project '" + project.getName() + "' (" + project.getRepository() + ")"
                     + "' is not registered . Supported build tools: " + getSupportedTools());
         }
+    }
+
+    /**
+     * Loads a project from a directory.
+     *
+     * @param directory the directory
+     * @return a non-null instance
+     */
+    public Project getProject(File directory) {
+        requireNonNull(directory);
+        if (projectLoader == null) throw new ScmException("A project loader is required");
+        return projectLoader.apply(directory);
     }
 
     /**

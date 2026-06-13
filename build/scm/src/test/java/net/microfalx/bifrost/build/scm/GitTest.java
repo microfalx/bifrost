@@ -45,7 +45,9 @@ class GitTest extends ServiceUnitTestCase {
 
     @BeforeEach
     void setup() {
-        project = Project.builder("bootstrap-demo").repository("git@github.com:adrian-tarau/bootstrap-demo.git").build();
+        project = Project.builder("bootstrap-demo")
+                .repository(Project.Repository.git("git@github.com:adrian-tarau/bootstrap-demo.git"))
+                .build();
         workspace = new File(JvmUtils.getTemporaryDirectory(), "bootstrap-demo-" + getId());
         doReturn(workspace).when(service).getWorkspace(any(Project.class));
         git.scmService = service;
@@ -72,8 +74,20 @@ class GitTest extends ServiceUnitTestCase {
     }
 
     @Test
-    void download() {
+    void downloadFully() {
         git.download(project);
+        assertWorkspace();
+    }
+
+    @Test
+    void downloadOnlyBranch() {
+        git.download(project, new Scm.Options().setBranch("1.0"));
+        assertWorkspace();
+    }
+
+    @Test
+    void downloadOnlyTag() {
+        git.download(project, new Scm.Options().setTag("v1.0.0"));
         assertWorkspace();
     }
 

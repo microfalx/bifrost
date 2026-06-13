@@ -3,6 +3,7 @@ package net.microfalx.bifrost.build.scm;
 import com.google.common.base.MoreObjects;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 import lombok.ToString;
 import net.microfalx.bifrost.api.Project;
 import net.microfalx.bootstrap.cli.util.Tool;
@@ -16,6 +17,8 @@ import java.util.Set;
  * Base class for all SCM tools.
  */
 public abstract class Scm extends Tool<Scm> {
+
+    protected static final Options DEFAULT_OPTIONS = new Options();
 
     ScmService scmService;
     static ThreadLocal<Project> PROJECT = new ThreadLocal<>();
@@ -58,14 +61,34 @@ public abstract class Scm extends Tool<Scm> {
      *
      * @param project the project
      */
-    public abstract void download(Project project);
+    public void download(Project project) {
+        download(project, new Options());
+    }
 
     /**
      * Downloads a working copy of the project
      *
      * @param project the project
+     * @param options the options to be used during download
      */
-    public abstract void checkout(Project project);
+    public abstract void download(Project project, Options options);
+
+    /**
+     * Switches to a different branch of the project.
+     *
+     * @param project the project
+     */
+    public void checkout(Project project) {
+        checkout(project, new Options());
+    }
+
+    /**
+     * Switches to a different branch of the project.
+     *
+     * @param project the project
+     * @param options the options to be used during download
+     */
+    public abstract void checkout(Project project, Options options);
 
     /**
      * Update the  working copy.
@@ -212,6 +235,16 @@ public abstract class Scm extends Tool<Scm> {
                 .add("name", getName())
                 .add("executable", getExecutable())
                 .toString();
+    }
+
+    @Getter
+    @Setter
+    @ToString
+    public static class Options {
+        private String branch;
+        private String tag;
+        private Integer depth;
+
     }
 
     @Getter

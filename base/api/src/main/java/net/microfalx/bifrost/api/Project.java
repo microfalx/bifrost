@@ -1,11 +1,10 @@
 package net.microfalx.bifrost.api;
 
+import lombok.Getter;
 import lombok.ToString;
 import net.microfalx.lang.IdentityAware;
 import net.microfalx.lang.NamedAndTaggedIdentifyAware;
-import net.microfalx.lang.UriUtils;
 
-import java.net.URI;
 import java.util.Optional;
 
 import static net.microfalx.lang.ArgumentUtils.requireNonNull;
@@ -27,16 +26,16 @@ public class Project extends NamedAndTaggedIdentifyAware<String> {
         return new Builder(id);
     }
 
-    private String repository;
+    private Repository repository;
     private String branch;
     private String version;
 
     /**
-     * Returns the URI(ish) of the code repository.
+     * Returns the code repository.
      *
      * @return a non-null instance
      */
-    public String getRepository() {
+    public Repository getRepository() {
         return repository;
     }
 
@@ -82,9 +81,33 @@ public class Project extends NamedAndTaggedIdentifyAware<String> {
         return copy;
     }
 
+    @Getter
+    @ToString
+    public static class Repository {
+
+        private final Type type;
+        private final String uri;
+
+        public static Repository git(String uri) {
+            return new Repository(Type.GIT, uri);
+        }
+
+        public Repository(Type type, String uri) {
+            this.type = requireNonNull(type);
+            this.uri = requireNonNull(uri);
+        }
+
+        public enum Type {
+            UNKNOWN,
+            GIT,
+            SVN
+        }
+
+    }
+
     public static class Builder extends NamedAndTaggedIdentifyAware.Builder<String> {
 
-        private String repository;
+        private Repository repository = new Repository(Repository.Type.UNKNOWN, "");
         private String branch = "main";
         private String version;
 
@@ -92,7 +115,7 @@ public class Project extends NamedAndTaggedIdentifyAware<String> {
             super(id);
         }
 
-        public Builder repository(String repository) {
+        public Builder repository(Repository repository) {
             this.repository = requireNonNull(repository);
             return this;
         }
