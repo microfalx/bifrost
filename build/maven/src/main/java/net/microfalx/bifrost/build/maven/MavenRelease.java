@@ -97,7 +97,7 @@ public class MavenRelease extends BuildExecution {
     private int updateDevelopmentVersionForProject() {
         developmentVersion = updateVersion(gaVersion, VersionType.NEXT_PATCH);
         getConsole().printTab().printBullet()
-                .print("Update project version for development  (" + developmentVersion + ")").printDots();
+                .print("Update project version for next development cycle  (" + developmentVersion + ")").printDots();
         return updateVersion(developmentVersion);
     }
 
@@ -108,7 +108,7 @@ public class MavenRelease extends BuildExecution {
                 .addArgument("versions:use-releases");
         int exitCode = handleExitCode(execute(launcher));
         if (exitCode != 0) return exitCode;
-        getConsole().printTab().printBullet().print("Update version properties to GA").printDots();
+        getConsole().printTab().printBullet().print("Update third parties version from properties to GA").printDots();
         launcher = createLauncher().addArgument("-DgenerateBackupPoms=false").addArgument("-DallowMajorUpdates=false")
                 .addArgument("versions:update-properties");
         return handleExitCode(execute(launcher));
