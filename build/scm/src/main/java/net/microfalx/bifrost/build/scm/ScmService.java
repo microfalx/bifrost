@@ -2,18 +2,21 @@ package net.microfalx.bifrost.build.scm;
 
 import com.google.common.base.Function;
 import com.google.common.base.MoreObjects;
+import lombok.extern.slf4j.Slf4j;
 import net.microfalx.bifrost.api.Project;
 import net.microfalx.bootstrap.resource.ResourceService;
 import net.microfalx.lang.ClassUtils;
 import net.microfalx.lang.StringUtils;
 import net.microfalx.resource.Resource;
 import net.microfalx.resource.ResourceUtils;
+import org.apache.commons.io.FileUtils;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
@@ -23,6 +26,7 @@ import static net.microfalx.lang.ArgumentUtils.requireNonNull;
 import static net.microfalx.lang.ArgumentUtils.requireNotEmpty;
 import static net.microfalx.lang.FileUtils.validateDirectoryExists;
 
+@Slf4j
 @Service
 public class ScmService implements InitializingBean {
 
@@ -31,6 +35,8 @@ public class ScmService implements InitializingBean {
 
     private final Map<String, Scm> toolsById = new ConcurrentHashMap<>();
     private final Collection<Scm> tools = new CopyOnWriteArraySet<>();
+    private final Map<String, File> projectWorkspaces = new ConcurrentHashMap<>();
+    private final Set<String> workspaceRequests = new CopyOnWriteArraySet<>();
 
     private Function<File, Project> projectLoader;
 
@@ -136,8 +142,19 @@ public class ScmService implements InitializingBean {
      * @return the file
      */
     public File getWorkspace(Project project) {
+        requireNonNull(project);
         Resource resource = resourceService.getPersisted("scm").resolve(project.getId(), Resource.Type.DIRECTORY);
-        return validateDirectoryExists(ResourceUtils.toFile(resource));
+        File workspace = validateDirectoryExists(ResourceUtils.toFile(resource));
+        if (workspaceRequests.add(project.getId())) cleanupWorkspace(workspace);
+        projectWorkspaces.put(project.getId(), workspace);
+        return workspace;
+    }
+
+    /**
+     * Cleans up the state.
+     */
+    public void cleanup() {
+        cleanupWorkspaces();
     }
 
     @Override
@@ -150,6 +167,21 @@ public class ScmService implements InitializingBean {
         return MoreObjects.toStringHelper(this)
                 .add("tools", tools)
                 .toString();
+    }
+
+    private void cleanupWorkspaces() {
+        LOGGER.info("Cleanup workspaces");
+        for (File workspace : projectWorkspaces.values()) {
+            cleanupWorkspace(workspace);
+        }
+    }
+
+    private void cleanupWorkspace(File workspace) {
+        try {
+            FileUtils.deleteDirectory(workspace);
+        } catch (IOException e) {
+            LOGGER.atWarn().setCause(e).log("Failed to cleanup workspace: {}", workspace);
+        }
     }
 
     private String getSupportedTools() {
