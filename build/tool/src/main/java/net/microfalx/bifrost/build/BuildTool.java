@@ -1,6 +1,7 @@
 package net.microfalx.bifrost.build;
 
 import com.google.common.base.MoreObjects;
+import lombok.extern.slf4j.Slf4j;
 import net.microfalx.bifrost.api.Project;
 import net.microfalx.bifrost.build.scm.Scm;
 import net.microfalx.bifrost.build.scm.ScmService;
@@ -22,6 +23,7 @@ import static net.microfalx.lang.StringUtils.NA_STRING;
 /**
  * An interface for a build tool.
  */
+@Slf4j
 public abstract class BuildTool extends Tool<BuildTool> {
 
     ScmService scmService;
@@ -32,13 +34,17 @@ public abstract class BuildTool extends Tool<BuildTool> {
 
     /**
      * Builds the project and deploys artifacts in local repository (snapshots).
+     *
+     * @param forRelease {@code true} if the build is targeting a release, {@code false} otherwise
      */
-    public abstract BuildExecution build();
+    public abstract BuildExecution build(boolean forRelease);
 
     /**
      * Builds the project and deploys artifacts in remote repository (snapshots).
+     *
+     * @param forRelease {@code true} if the build is targeting a release, {@code false} otherwise
      */
-    public abstract BuildExecution deploy();
+    public abstract BuildExecution deploy(boolean forRelease);
 
     /**
      * Releases the project and deploys artifacts in remote repository (GA).

@@ -14,6 +14,7 @@ import java.io.File;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.doReturn;
 
 class BuildCommandTest extends ServiceUnitTestCase {
@@ -36,7 +37,7 @@ class BuildCommandTest extends ServiceUnitTestCase {
         doReturn(buildTool).when(buildService).detect(any(File.class));
         doReturn(project).when(buildTool).getProject(any(File.class));
         doReturn(scm).when(buildTool).getScm(any(Project.class));
-        doReturn(execution).when(buildTool).build();
+        doReturn(execution).when(buildTool).build(anyBoolean());
     }
 
     @Test

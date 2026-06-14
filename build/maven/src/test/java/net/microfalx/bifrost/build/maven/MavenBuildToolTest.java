@@ -16,7 +16,7 @@ class MavenBuildToolTest {
     @Test
     @Disabled
     void buildForReal() {
-        BuildExecution execution = tool.build();
+        BuildExecution execution = tool.build(false);
         assertEquals(0, execution.waitFor(), execution::getLogs);
         assertThat(execution.getSteps().size()).isGreaterThan(5);
 
@@ -32,19 +32,19 @@ class MavenBuildToolTest {
 
     @Test
     void build() {
-        BuildExecution execution = tool.setDryRun(true).build();
+        BuildExecution execution = tool.setDryRun(true).build(false);
         assertEquals(0, execution.waitFor(), execution::getLogs);
     }
 
     @Test
     void deploy() {
-        BuildExecution execution = tool.setDryRun(true).build();
+        BuildExecution execution = tool.setDryRun(true).build(false);
         assertEquals(0, execution.waitFor(), execution::getLogs);
     }
 
     @Test
     void release() {
-        BuildExecution execution = tool.setDryRun(true).build();
+        BuildExecution execution = tool.setDryRun(true).build(false);
         assertEquals(0, execution.waitFor(), execution::getLogs);
     }
 

@@ -1,11 +1,13 @@
 package net.microfalx.bifrost.build.scm;
 
+import lombok.extern.slf4j.Slf4j;
 import net.microfalx.bifrost.api.Project;
 import net.microfalx.bootstrap.core.process.ProcessLauncher;
 import net.microfalx.lang.JvmUtils;
 import net.microfalx.lang.StringUtils;
 import org.springframework.stereotype.Component;
 
+import java.io.File;
 import java.util.Objects;
 import java.util.Set;
 import java.util.regex.Matcher;
@@ -17,6 +19,7 @@ import static net.microfalx.lang.StringUtils.defaultIfEmpty;
 import static net.microfalx.lang.StringUtils.isNotEmpty;
 
 @Component
+@Slf4j
 public class Git extends Scm {
 
     public Git() {
@@ -69,25 +72,32 @@ public class Git extends Scm {
     }
 
     @Override
-    public void download(Project project, Options options) {
+    public File download(Project project, Options options) {
         ProcessLauncher launcher = createLauncher().addArgument("clone");
         String tagOrBranch = defaultIfEmpty(options.getTag(), options.getBranch());
-        if (isNotEmpty(tagOrBranch)) {
+        boolean hasTagOrBranch = isNotEmpty(tagOrBranch);
+        if (hasTagOrBranch) {
             launcher.addArgument("--branch").addArgument(tagOrBranch)
                     .addArgument("--single-branch").addArgument("--depth").addArgument("1");
         }
+        File targetDirectory = getWorkspace(project, hasTagOrBranch);
+        LOGGER.info("Download repository '{}' to '{}'", project.getRepository().getUri(), targetDirectory);
         launcher.addArgument(project.getRepository().getUri())
-                .addArgument(getWorkspace(project).getAbsolutePath());
+                .addArgument(targetDirectory.getAbsolutePath());
         execute(launcher);
+        return targetDirectory;
     }
 
     @Override
-    public void checkout(Project project, Options options) {
+    public File checkout(Project project, Options options) {
         downloadIfRequired(project, options);
-        ProcessLauncher launcher = updateWorkingDirectory(createLauncher(), project)
-                .addArgument("checkout")
+        ProcessLauncher launcher = updateWorkingDirectory(createLauncher(), project);
+        LOGGER.info("Checkout branch '{}' for repository '{}' to '{}'", project.getBranch(),
+                project.getRepository().getUri(), launcher.getWorkingDirectory());
+        launcher.addArgument("checkout")
                 .addArgument(project.getBranch());
         execute(launcher);
+        return launcher.getWorkingDirectory();
     }
 
     @Override
@@ -216,7 +226,7 @@ public class Git extends Scm {
     }
 
     private String getVersionFromTagOutput(String line) {
-        Matcher matcher = GET_BRANCH_VERSION.matcher(line);
+        Matcher matcher = GET_TAG_VERSION.matcher(line);
         if (matcher.find()) {
             return matcher.group(1);
         } else {

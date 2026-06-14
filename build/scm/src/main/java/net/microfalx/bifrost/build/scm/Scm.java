@@ -5,6 +5,7 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
+import lombok.extern.slf4j.Slf4j;
 import net.microfalx.bifrost.api.Project;
 import net.microfalx.bootstrap.cli.util.Tool;
 import net.microfalx.bootstrap.core.process.ProcessLauncher;
@@ -61,8 +62,8 @@ public abstract class Scm extends Tool<Scm> {
      *
      * @param project the project
      */
-    public void download(Project project) {
-        download(project, new Options());
+    public File download(Project project) {
+        return download(project, new Options());
     }
 
     /**
@@ -71,15 +72,15 @@ public abstract class Scm extends Tool<Scm> {
      * @param project the project
      * @param options the options to be used during download
      */
-    public abstract void download(Project project, Options options);
+    public abstract File download(Project project, Options options);
 
     /**
      * Switches to a different branch of the project.
      *
      * @param project the project
      */
-    public void checkout(Project project) {
-        checkout(project, new Options());
+    public File checkout(Project project) {
+        return checkout(project, new Options());
     }
 
     /**
@@ -88,7 +89,7 @@ public abstract class Scm extends Tool<Scm> {
      * @param project the project
      * @param options the options to be used during download
      */
-    public abstract void checkout(Project project, Options options);
+    public abstract File checkout(Project project, Options options);
 
     /**
      * Update the  working copy.
@@ -157,7 +158,19 @@ public abstract class Scm extends Tool<Scm> {
      * @return the directory
      */
     protected final File getWorkspace(Project project) {
-        if (hasWorkingDirectory()) {
+        return getWorkspace(project, false);
+    }
+
+    /**
+     * Returns the workspace for a project.
+     *
+     * @param project  the project
+     * @param override {@code true} to ignore the workspace and use an independent workspace,
+     *                 {@code flase} to use current workspace, if exists
+     * @return the directory
+     */
+    protected final File getWorkspace(Project project, boolean override) {
+        if (hasWorkingDirectory() && !override) {
             return getWorkingDirectory();
         } else {
             return scmService.getWorkspace(project);
@@ -171,7 +184,7 @@ public abstract class Scm extends Tool<Scm> {
      * @return {@code true} if has working copy, {@code false} otherwise
      */
     protected final boolean hasWorkingCopy(Project project) {
-        File workspace = getWorkspace(project);
+        File workspace = getWorkspace(project, false);
         return ObjectUtils.isNotEmpty(workspace.listFiles((dir, name) -> !name.endsWith(getFiles()[0])));
     }
 
@@ -218,7 +231,20 @@ public abstract class Scm extends Tool<Scm> {
      * @return the launcher
      */
     protected ProcessLauncher updateWorkingDirectory(ProcessLauncher launcher, Project project) {
-        File workspace = getWorkspace(project);
+        return updateWorkingDirectory(launcher, project, false);
+    }
+
+    /**
+     * Updates the working directory with the workspace of the project.
+     *
+     * @param launcher the launcher
+     * @param project  the project
+     * @param override {@code true} to ignore the workspace and use an independent workspace,
+     *                 {@code flase} to use current workspace, if exists
+     * @return the launcher
+     */
+    protected ProcessLauncher updateWorkingDirectory(ProcessLauncher launcher, Project project, boolean override) {
+        File workspace = getWorkspace(project, override);
         if (!workspace.exists()) {
             throw new ScmException("Workspace for project '" + project.getName() + "' does not exist: " + workspace);
         }

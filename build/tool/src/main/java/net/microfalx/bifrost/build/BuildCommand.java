@@ -82,9 +82,9 @@ public class BuildCommand extends RunnableCommand {
         } else {
             console.printDots();
             if (push) {
-                execution = buildTool.deploy();
+                execution = buildTool.deploy(false);
             } else {
-                execution = buildTool.build();
+                execution = buildTool.build(false);
             }
         }
         execution.setProject(project);

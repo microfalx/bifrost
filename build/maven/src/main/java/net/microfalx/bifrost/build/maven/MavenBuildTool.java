@@ -25,14 +25,16 @@ public class MavenBuildTool extends BuildTool {
     }
 
     @Override
-    public BuildExecution build() {
-        ProcessLauncher launcher = createLauncher().setName("mvn install").addArgument("install");
+    public BuildExecution build(boolean forRelease) {
+        ProcessLauncher launcher = createLauncher().addArgument("install");
+        if (forRelease) updateForRelease(launcher);
         return createExecution(launcher);
     }
 
     @Override
-    public BuildExecution deploy() {
-        ProcessLauncher launcher = createLauncher().setName("mvn install").addArgument("deploy");
+    public BuildExecution deploy(boolean forRelease) {
+        ProcessLauncher launcher = createLauncher().addArgument("deploy");
+        if (forRelease) updateForRelease(launcher);
         return createExecution(launcher);
     }
 
@@ -89,6 +91,10 @@ public class MavenBuildTool extends BuildTool {
         super.updateLauncher(launcher);
         launcher.addArgument("-Dtalos.quiet=false");
         if (isClean()) launcher.addArgument("clean");
+    }
+
+    private void updateForRelease(ProcessLauncher launcher) {
+        launcher.addArgument("-P").addArgument("dist,sign").addArgument("-DskipTests");
     }
 
 

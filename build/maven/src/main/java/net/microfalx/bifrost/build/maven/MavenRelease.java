@@ -33,6 +33,7 @@ public class MavenRelease extends BuildExecution {
     private String errorMessage;
 
     private Version gaVersion;
+    private String tag;
     private Version developmentVersion;
 
     private Set<String> tags = Collections.emptySet();
@@ -57,6 +58,8 @@ public class MavenRelease extends BuildExecution {
         exitCode = updateDevelopmentVersionForProject();
         if (exitCode != 0) return exitCode;
         exitCode = commit(VersionType.NEXT_PATCH);
+        if (exitCode != 0) return exitCode;
+        exitCode = releaseProject();
         return exitCode;
     }
 
@@ -108,9 +111,21 @@ public class MavenRelease extends BuildExecution {
 
     private int buildProject() {
         getConsole().printTab().printBullet().print("Build project").printDots();
+        return handleExitCode(getTool().build(true));
+    }
+
+    private int releaseProject() {
+        getConsole().printTab().printBullet().print("Release project").printDots();
         return handleExitCode(execute(() -> {
-            BuildExecution execution = getTool().build();
-            return execution.waitFor();
+            File workspace = getScm().download(getProjectOrFail(), new Scm.Options().setTag(tag));
+            BuildTool currentTool = getTool();
+            File currentWorkingDirectory = currentTool.getWorkingDirectory();
+            try {
+                currentTool.setWorkingDirectory(workspace);
+                return currentTool.deploy(true).waitFor();
+            } finally {
+                currentTool.setWorkingDirectory(currentWorkingDirectory);
+            }
         }));
     }
 
@@ -136,9 +151,10 @@ public class MavenRelease extends BuildExecution {
 
     private int tag() {
         getConsole().printDots().print("Tag").printDots();
+        tag = "v" + gaVersion.toString();
         return handleRunnable(() -> {
             Scm scm = getScm();
-            scm.tag(getProjectOrFail(), "v" + gaVersion.toString(), "Release " + gaVersion);
+            scm.tag(getProjectOrFail(), tag, "Release " + gaVersion);
         });
     }
 
@@ -187,6 +203,14 @@ public class MavenRelease extends BuildExecution {
             String log = insertSpaces(getFirstAndLastStepLogs(), 2, true);
             console.printLn(log);
         }
+        return exitCode;
+    }
+
+    private int handleExitCode(BuildExecution execution) {
+        Console console = getConsole();
+        int exitCode = execute(execution::waitFor);
+        console.printExitCode(exitCode);
+        if (exitCode > 0) errorMessage = execution.getFirstAndLastStepLogs();
         return exitCode;
     }
 

@@ -35,7 +35,7 @@ class BuildServiceTest extends ServiceUnitTestCase {
     @Test
     void detect() {
         BuildTool tool = buildService.detect(getWorkingDirectory());
-        assertEquals(0, tool.build().waitFor());
+        assertEquals(0, tool.build(false).waitFor());
     }
 
     @Test

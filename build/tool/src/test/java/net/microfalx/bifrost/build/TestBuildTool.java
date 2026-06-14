@@ -14,12 +14,12 @@ public class TestBuildTool extends BuildTool {
     }
 
     @Override
-    public BuildExecution build() {
+    public BuildExecution build(boolean forRelease) {
         return createExecution(createLauncher());
     }
 
     @Override
-    public BuildExecution deploy() {
+    public BuildExecution deploy(boolean forRelease) {
         return createExecution(createLauncher());
     }
 
