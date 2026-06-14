@@ -26,9 +26,19 @@ public class Project extends NamedAndTaggedIdentifyAware<String> {
         return new Builder(id);
     }
 
+    private Artifact artifact;
     private Repository repository;
     private String branch;
     private String version;
+
+    /**
+     * Returns an optional artifact.
+     *
+     * @return a non-null optional
+     */
+    public Optional<Artifact> getArtifact() {
+        return Optional.ofNullable(artifact);
+    }
 
     /**
      * Returns the code repository.
@@ -107,12 +117,18 @@ public class Project extends NamedAndTaggedIdentifyAware<String> {
 
     public static class Builder extends NamedAndTaggedIdentifyAware.Builder<String> {
 
-        private Repository repository = new Repository(Repository.Type.UNKNOWN, "");
+        private Artifact artifact;
+        private Repository repository = new Repository(Repository.Type.UNKNOWN, "localhos");
         private String branch = "main";
         private String version;
 
         private Builder(String id) {
             super(id);
+        }
+
+        public Builder artifact(Artifact artifact) {
+            this.artifact = requireNonNull(artifact);
+            return this;
         }
 
         public Builder repository(Repository repository) {
@@ -138,6 +154,7 @@ public class Project extends NamedAndTaggedIdentifyAware<String> {
         @Override
         public Project build() {
             Project project = (Project) super.build();
+            project.artifact = artifact;
             project.repository = repository;
             project.version = version;
             project.branch = branch;

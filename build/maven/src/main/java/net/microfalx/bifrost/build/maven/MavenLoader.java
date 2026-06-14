@@ -1,5 +1,6 @@
 package net.microfalx.bifrost.build.maven;
 
+import net.microfalx.bifrost.api.Artifact;
 import net.microfalx.bifrost.api.Project;
 import net.microfalx.lang.EnumUtils;
 import net.microfalx.lang.JvmUtils;
@@ -37,7 +38,8 @@ public class MavenLoader {
     public Project getProject(File pom) {
         initialize();
         MavenProject mavenProject = loadMavenProject(pom, false);
-        Project.Builder builder = Project.builder(MavenUtils.getId(mavenProject.getArtifact()));
+        org.apache.maven.artifact.Artifact artifact = mavenProject.getArtifact();
+        Project.Builder builder = Project.builder(MavenUtils.getId(artifact));
         builder.version(mavenProject.getVersion()).name(mavenProject.getName())
                 .description(mavenProject.getDescription());
         if (mavenProject.getScm() != null) {
@@ -49,6 +51,8 @@ public class MavenLoader {
             }
             if (uri != null) builder.repository(getRepository(uri));
         }
+        builder.artifact(Artifact.builder(mavenProject.getGroupId(), mavenProject.getArtifactId())
+                .type(artifact.getType()).build());
         return builder.build();
     }
 

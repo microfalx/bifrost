@@ -1,5 +1,6 @@
 package net.microfalx.bifrost.build.maven;
 
+import net.microfalx.bifrost.api.Artifact;
 import net.microfalx.bifrost.api.Project;
 import net.microfalx.lang.JvmUtils;
 import org.assertj.core.api.Assertions;
@@ -30,6 +31,10 @@ class MavenLoaderTest {
         assertNotNull(project.getId());
         assertEquals("Bifrost :: Build :: Maven", project.getName());
         assertThat(project.getRepository().getUri()).startsWith("https://github.com/microfalx/bifrost");
+        Artifact artifact = project.getArtifact().orElseThrow();
+        assertEquals("net.microfalx.bifrost", artifact.getGroupId());
+        assertEquals("bifrost-build-maven", artifact.getArtifactId());
+        assertEquals("jar", artifact.getType());
     }
 
 }

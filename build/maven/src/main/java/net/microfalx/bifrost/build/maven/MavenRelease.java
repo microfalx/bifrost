@@ -1,5 +1,6 @@
 package net.microfalx.bifrost.build.maven;
 
+import net.microfalx.bifrost.api.Artifact;
 import net.microfalx.bifrost.build.BuildException;
 import net.microfalx.bifrost.build.BuildExecution;
 import net.microfalx.bifrost.build.BuildTool;
@@ -103,9 +104,13 @@ public class MavenRelease extends BuildExecution {
     private int updateGaVersionForThirdParties() {
         getConsole().printTab().printBullet().print("Update third parties versions to GA").printDots();
         ProcessLauncher launcher = createLauncher().addArgument("-DgenerateBackupPoms=false")
-                .addArgument("-Dtalos.quiet=false").addArgument("-DfailIfNotReplaced=true")
-                .addArgument("-DallowRangeMatching=true")
+                .addArgument("-DfailIfNotReplaced=true").addArgument("-DallowRangeMatching=true")
                 .addArgument("versions:use-releases");
+        int exitCode = handleExitCode(execute(launcher));
+        if (exitCode != 0) return exitCode;
+        getConsole().printTab().printBullet().print("Update version properties to GA").printDots();
+        launcher = createLauncher().addArgument("-DgenerateBackupPoms=false").addArgument("-DallowMajorUpdates=false")
+                .addArgument("versions:update-properties");
         return handleExitCode(execute(launcher));
     }
 
@@ -159,23 +164,33 @@ public class MavenRelease extends BuildExecution {
     }
 
     private Version updateVersion(Version version, VersionType versionType) {
-        return switch (versionType) {
+        Version nextVersion = switch (versionType) {
             case GA -> version.withSnapshot(false);
             case NEXT_PATCH -> version.withPatch(version.getPatch() + 1).withSnapshot(true);
             case NEXT_MINOR -> version.withMinor(version.getMinor() + 1).withPatch(0).withSnapshot(true);
             case NEXT_MAJOR -> version.withMajor(version.getMajor() + 1).withMinor(0).withPatch(0).withSnapshot(true);
         };
+        if (isAlwaysGa()) nextVersion = nextVersion.withSnapshot(false);
+        return nextVersion;
+    }
+
+    private boolean isAlwaysGa() {
+        Artifact artifact = getProjectOrFail().getArtifact().orElseThrow();
+        String artifactId = artifact.getArtifactId();
+        return Artifact.TYPE_POM.equals(artifact.getType()) && (artifactId.equals("bom") || artifactId.equals("pom")
+                || artifactId.endsWith("-pom") || artifactId.endsWith("-bom"));
     }
 
     private int updateVersion(Version version) {
         ProcessLauncher launcher = createLauncher().addArgument("-DgenerateBackupPoms=false")
-                .addArgument("-Dtalos.quiet=false").addArgument("-DnewVersion=" + version.toMaven())
+                .addArgument("-DnewVersion=" + version.toMaven())
                 .addArgument("versions:set");
         return handleExitCode(execute(launcher));
     }
 
     private ProcessLauncher createLauncher() {
         ProcessLauncher launcher = getTool().createLauncher();
+        launcher.addArgument("-Dtalos.quiet=false");
         setLauncher(launcher);
         return launcher;
     }
