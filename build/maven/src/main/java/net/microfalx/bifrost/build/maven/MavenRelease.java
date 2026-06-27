@@ -90,14 +90,14 @@ public class MavenRelease extends BuildExecution {
         Version parsedVersion = Version.parse(getProjectOrFail().getVersion().orElseThrow());
         gaVersion = updateVersion(parsedVersion, VersionType.GA);
         getConsole().printTab().printBullet()
-                .print("Update project version to GA (" + gaVersion + ")").printDots();
+                .print("Update project version to GA (" + gaVersion.toMaven() + ")").printDots();
         return updateVersion(gaVersion);
     }
 
     private int updateDevelopmentVersionForProject() {
         developmentVersion = updateVersion(gaVersion, VersionType.NEXT_PATCH);
         getConsole().printTab().printBullet()
-                .print("Update project version for next development cycle  (" + developmentVersion + ")").printDots();
+                .print("Update project version for next development cycle  (" + developmentVersion.toMaven() + ")").printDots();
         return updateVersion(developmentVersion);
     }
 
@@ -143,7 +143,7 @@ public class MavenRelease extends BuildExecution {
 
     private int commit(VersionType version) {
         String message = switch (version) {
-            case GA -> "Release " + gaVersion;
+            case GA -> "Release " + gaVersion.toMaven();
             case NEXT_PATCH -> "Next release " + developmentVersion.toMaven();
             case NEXT_MAJOR, NEXT_MINOR -> "Next development " + developmentVersion.toMaven();
         };
@@ -156,10 +156,10 @@ public class MavenRelease extends BuildExecution {
 
     private int tag() {
         getConsole().printDots().print("Tag").printDots();
-        tag = "v" + gaVersion.toString();
+        tag = "v" + gaVersion.toMaven();
         return handleRunnable(() -> {
             Scm scm = getScm();
-            scm.tag(getProjectOrFail(), tag, "Release " + gaVersion);
+            scm.tag(getProjectOrFail(), tag, "Release " + gaVersion.toMaven());
         });
     }
 
